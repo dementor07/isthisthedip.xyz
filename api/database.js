@@ -145,6 +145,10 @@ class Database {
   }
 
   async incrementUserSearches(userId) {
+    if (!userId) {
+      return; // Skip for anonymous users
+    }
+    
     const today = new Date().toISOString().split('T')[0];
     const user = await this.getUserById(userId);
     

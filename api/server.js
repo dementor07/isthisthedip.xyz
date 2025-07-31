@@ -217,6 +217,9 @@ app.post('/api/analyze', AuthService.optionalAuth, async (req, res) => {
     // Perform fast analysis with error handling
     let analysis;
     try {
+      if (!fastAnalyzer) {
+        throw new Error('Fast analyzer not initialized');
+      }
       analysis = await fastAnalyzer.calculateFastDipScore(crypto, userTier);
     } catch (analysisError) {
       console.error('Analysis error for', crypto, ':', analysisError.message);
@@ -581,7 +584,7 @@ app.get('/api/cache-stats', AuthService.optionalAuth, async (req, res) => {
       });
     }
 
-    const stats = fastAnalyzer.cache.getStats();
+    const stats = fastAnalyzer?.cache?.getStats() || { size: 0, hitRate: 0, apiCallsSaved: 0 };
     res.json({
       cacheStats: stats,
       performance: {
@@ -604,7 +607,7 @@ app.get('/api/cache-stats', AuthService.optionalAuth, async (req, res) => {
 // Cache management endpoints (admin only - add auth as needed)
 app.post('/api/cache/clear', (req, res) => {
   try {
-    const cleared = fastAnalyzer.cache.clear();
+    const cleared = fastAnalyzer?.cache?.clear() || 0;
     res.json({ 
       success: true, 
       message: `Cleared ${cleared} cache entries`,
@@ -618,7 +621,7 @@ app.post('/api/cache/clear', (req, res) => {
 app.post('/api/cache/invalidate/:type', (req, res) => {
   try {
     const { type } = req.params;
-    const deleted = fastAnalyzer.cache.invalidateByType(type);
+    const deleted = fastAnalyzer?.cache?.invalidateByType(type) || 0;
     res.json({ 
       success: true, 
       message: `Invalidated ${deleted} entries of type ${type}`,
@@ -650,7 +653,7 @@ app.get('/api/sentiment-stats', AuthService.optionalAuth, async (req, res) => {
       });
     }
 
-    const sentimentStats = fastAnalyzer.sentimentAnalyzer.getCallStats();
+    const sentimentStats = fastAnalyzer?.sentimentAnalyzer?.getCallStats() || { dailyCalls: 0, remaining: 0, maxDailyCalls: 1000, hasApiKey: false, hasNewsApiKey: false };
     res.json({
       hugging_face: {
         dailyCalls: sentimentStats.dailyCalls,
@@ -704,15 +707,15 @@ app.get('/api/realtime/price/:crypto', AuthService.optionalAuth, async (req, res
     }
 
     // Get current price and start streaming if not already active
-    const currentPrice = fastAnalyzer.realTimeStreamer.getCurrentPrice(crypto);
-    const isConnected = fastAnalyzer.realTimeStreamer.connections.has(crypto.toLowerCase());
+    const currentPrice = fastAnalyzer?.realTimeStreamer?.getCurrentPrice(crypto) || 0;
+    const isConnected = fastAnalyzer?.realTimeStreamer?.connections?.has(crypto.toLowerCase()) || false;
     
     // Start streaming for this crypto
     if (!isConnected) {
-      fastAnalyzer.realTimeStreamer.subscribe(crypto, () => {}); // Empty callback for now
+      fastAnalyzer?.realTimeStreamer?.subscribe(crypto, () => {}); // Empty callback for now
     }
 
-    const status = fastAnalyzer.realTimeStreamer.getStatus();
+    const status = fastAnalyzer?.realTimeStreamer?.getStatus() || {};
     
     res.json({
       crypto: crypto.toUpperCase(),
@@ -753,8 +756,8 @@ app.get('/api/realtime/technicals/:crypto', AuthService.optionalAuth, async (req
       });
     }
 
-    const technicals = fastAnalyzer.realTimeTechnical.getTechnicalSnapshot(crypto, interval);
-    const signals = fastAnalyzer.realTimeTechnical.generateTradingSignals(crypto, interval);
+    const technicals = fastAnalyzer?.realTimeTechnical?.getTechnicalSnapshot(crypto, interval) || null;
+    const signals = fastAnalyzer?.realTimeTechnical?.generateTradingSignals(crypto, interval) || null;
     
     if (!technicals) {
       return res.json({
@@ -796,8 +799,8 @@ app.get('/api/realtime/status', AuthService.optionalAuth, async (req, res) => {
       });
     }
 
-    const streamerStatus = fastAnalyzer.realTimeStreamer.getStatus();
-    const technicalStatus = fastAnalyzer.realTimeTechnical.getStatus();
+    const streamerStatus = fastAnalyzer?.realTimeStreamer?.getStatus() || {};
+    const technicalStatus = fastAnalyzer?.realTimeTechnical?.getStatus() || {};
     
     res.json({
       tier: userTier,
@@ -871,7 +874,7 @@ app.get('/api/technical-stats', AuthService.optionalAuth, async (req, res) => {
       });
     }
 
-    const technicalStats = fastAnalyzer.technicalIndicators.getCallStats();
+    const technicalStats = fastAnalyzer?.technicalIndicators?.getCallStats() || { dailyCalls: 0, remaining: 0, maxDailyCalls: 25, hasApiKey: false };
     res.json({
       alpha_vantage: {
         dailyCalls: technicalStats.dailyCalls,

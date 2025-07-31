@@ -46,7 +46,7 @@ class DatabaseAdapter {
         }
     }
 
-    async updateUserSearches(userId, increment = 1) {
+    async incrementUserSearches(userId, increment = 1) {
         if (this.isPostgres) {
             return await this.db.updateUserSearches(userId, increment);
         } else {
@@ -114,6 +114,52 @@ class DatabaseAdapter {
             return parseInt(result.rows[0].count);
         } else {
             return await this.db.getIPAnalysisCount(ipAddress);
+        }
+    }
+
+    // Generic database operations
+    async run(sql, params = []) {
+        if (this.isPostgres) {
+            const result = await this.db.query(sql, params);
+            return { id: result.rows[0]?.id, changes: result.rowCount };
+        } else {
+            return await this.db.run(sql, params);
+        }
+    }
+
+    async get(sql, params = []) {
+        if (this.isPostgres) {
+            const result = await this.db.query(sql, params);
+            return result.rows[0];
+        } else {
+            return await this.db.get(sql, params);
+        }
+    }
+
+    async all(sql, params = []) {
+        if (this.isPostgres) {
+            const result = await this.db.query(sql, params);
+            return result.rows;
+        } else {
+            return await this.db.all(sql, params);
+        }
+    }
+
+    // Search logging
+    async logSearch(userId, cryptoSymbol, score, confidence, ipAddress) {
+        if (this.isPostgres) {
+            return await this.db.logSearch(userId, cryptoSymbol, score, confidence, ipAddress);
+        } else {
+            return await this.db.logSearch(userId, cryptoSymbol, score, confidence, ipAddress);
+        }
+    }
+
+    // API usage tracking
+    async incrementAPIUsage(apiName) {
+        if (this.isPostgres) {
+            return await this.db.incrementAPIUsage(apiName);
+        } else {
+            return await this.db.incrementAPIUsage(apiName);
         }
     }
 

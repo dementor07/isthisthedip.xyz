@@ -61,7 +61,7 @@ class CryptoCalculator {
     }
 
     // For authenticated users, check if they can search
-    if (authManager.isAuthenticated() && !authManager.canSearch()) {
+    if (window.authManager && authManager.isAuthenticated() && !authManager.canSearch()) {
       this.showUpgradePrompt();
       return;
     }
@@ -160,7 +160,7 @@ class CryptoCalculator {
     this.updatePriceStats(data);
     this.updateDipScore(data);
     
-    if (authManager.getTier() !== 'free') {
+    if (window.authManager && authManager.getTier() !== 'free') {
       this.updatePremiumFeatures(data);
     } else {
       this.showUpgradeFeatures();
@@ -231,7 +231,7 @@ class CryptoCalculator {
     signalSubtext.textContent = subtext;
 
     // Add confidence indicator for premium users
-    if (data.confidence && authManager.getTier() !== 'free') {
+    if (data.confidence && window.authManager && authManager.getTier() !== 'free') {
       const confidenceSpan = document.createElement('span');
       confidenceSpan.className = `ml-2 text-sm opacity-75`;
       confidenceSpan.textContent = `(${data.confidence} confidence)`;
@@ -285,7 +285,7 @@ class CryptoCalculator {
       this.showDetailedAnalysis(data);
     }
 
-    const userTier = authManager.getTier();
+    const userTier = window.authManager ? authManager.getTier() : 'free';
     
     // Show pro charts for pro users
     if (userTier === 'pro') {
@@ -308,7 +308,7 @@ class CryptoCalculator {
     }
 
     // Start real-time updates for premium/pro users
-    if (userTier !== 'free') {
+    if (userTier !== 'free' && window.realTimeService) {
       this.startRealTimeUpdates(data.crypto?.symbol || data.crypto?.name);
     }
   }
@@ -578,6 +578,7 @@ class CryptoCalculator {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
       console.error('Chart.js is not loaded');
+      ctx.parentElement.innerHTML = '<div class="text-gray-400 text-center py-8">Charts require Chart.js library</div>';
       return;
     }
 
@@ -629,6 +630,7 @@ class CryptoCalculator {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
       console.error('Chart.js is not loaded');
+      ctx.parentElement.innerHTML = '<div class="text-gray-400 text-center py-8">Charts require Chart.js library</div>';
       return;
     }
 
@@ -698,6 +700,7 @@ class CryptoCalculator {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
       console.error('Chart.js is not loaded');
+      ctx.parentElement.innerHTML = '<div class="text-gray-400 text-center py-8">Charts require Chart.js library</div>';
       return;
     }
 
@@ -871,7 +874,7 @@ class CryptoCalculator {
     // Stop any existing real-time updates to prevent race conditions
     this.stopRealTimeUpdates();
 
-    const userTier = authManager.getTier();
+    const userTier = window.authManager ? authManager.getTier() : 'free';
     
     // Subscribe to real-time updates
     const unsubscribe = window.realTimeService.subscribe((update) => {
@@ -972,7 +975,7 @@ class CryptoCalculator {
           <span class="text-green-400 font-medium">Real-time updates active</span>
         </div>
         <div class="text-xs text-gray-400 mt-1">
-          Updates every ${authManager.getTier() === 'pro' ? '5' : '30'} seconds
+          Updates every ${window.authManager && authManager.getTier() === 'pro' ? '5' : '30'} seconds
         </div>
       </div>
     `);
@@ -1036,7 +1039,7 @@ class CryptoCalculator {
 
   updateSearchCounter() {
     const counterElements = document.querySelectorAll('.search-counter');
-    const remaining = authManager.getSearchesRemaining();
+    const remaining = window.authManager ? authManager.getSearchesRemaining() : 0;
     
     counterElements.forEach(el => {
       if (remaining === 'unlimited') {
