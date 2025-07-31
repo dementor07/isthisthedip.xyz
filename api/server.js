@@ -24,7 +24,8 @@ try {
 }
 
 const app = express();
-const db = new Database();
+const DatabaseAdapter = require('./database-adapter');
+const db = new DatabaseAdapter();
 const paymentService = new PaymentService();
 
 // Initialize crypto analyzers early to avoid undefined references
@@ -38,6 +39,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://js.stripe.com", "https://cdn.jsdelivr.net"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: [
         "'self'", 
