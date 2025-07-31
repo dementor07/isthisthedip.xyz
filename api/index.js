@@ -114,12 +114,30 @@ app.get('/api/auth/me', (req, res) => {
   res.json({ user: null });
 });
 
+// Handle specific routes
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
+});
+
+app.get('/leaderboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'leaderboard.html'));
+});
+
 // Serve static files for non-API routes
 app.get('*', (req, res) => {
-  const filePath = path.join(__dirname, '..', req.path === '/' ? 'index.html' : req.path);
+  let filePath;
+  if (req.path === '/') {
+    filePath = path.join(__dirname, '..', 'public', 'index.html');
+  } else if (req.path.startsWith('/js/')) {
+    filePath = path.join(__dirname, '..', 'public', req.path);
+  } else {
+    filePath = path.join(__dirname, '..', 'public', req.path);
+  }
+  
   res.sendFile(filePath, (err) => {
     if (err) {
-      res.status(404).send('Not found');
+      // Fallback to index.html for SPA routing
+      res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
     }
   });
 });
