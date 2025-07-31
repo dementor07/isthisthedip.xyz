@@ -28,6 +28,16 @@ const DatabaseAdapter = require('./database-adapter');
 const db = new DatabaseAdapter();
 const paymentService = new PaymentService();
 
+// Initialize database connection immediately
+(async () => {
+  try {
+    await db.connect();
+    console.log('✅ Database connected successfully');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+  }
+})();
+
 // Initialize crypto analyzers early to avoid undefined references
 let cryptoAnalyzer;
 let fastAnalyzer;

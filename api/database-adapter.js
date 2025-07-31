@@ -90,10 +90,30 @@ class DatabaseAdapter {
     }
 
     async getLeaderboard(timeframe = '24h', limit = 50) {
+        if (!this.db) {
+            await this.connect();
+        }
         if (this.isPostgres) {
             return await this.db.getLeaderboard(timeframe, limit);
         } else {
             return await this.db.getLeaderboard(timeframe, limit);
+        }
+    }
+
+    async all(query, params = []) {
+        if (!this.db) {
+            await this.connect();
+        }
+        if (this.isPostgres) {
+            const result = await this.db.query(query, params);
+            return result.rows;
+        } else {
+            return new Promise((resolve, reject) => {
+                this.db.db.all(query, params, (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
+            });
         }
     }
 
