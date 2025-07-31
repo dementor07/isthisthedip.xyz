@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Is This The Dip?</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .stats-card {
+            transition: transform 0.2s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <!-- Desktop Navigation -->
+            <div class="hidden md:flex justify-between items-center">
+                <div class="flex items-center space-x-6">
+                    <a href="/" class="text-2xl font-bold flex items-center hover:opacity-80 transition-opacity">
+                        <span class="mr-2">📉</span> Is This The Dip?
+                    </a>
+                    <nav class="flex items-center space-x-4">
+                        <a href="/" class="text-sm hover:text-purple-200 transition-colors">Home</a>
+                        <a href="/leaderboard" class="text-sm hover:text-purple-200 transition-colors">🏆 Leaderboard</a>
+                        <a href="/pricing" class="text-sm hover:text-purple-200 transition-colors">Pricing</a>
+                        <a href="/dashboard" class="text-sm text-purple-200">📊 Dashboard</a>
+                    </nav>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="user-email text-sm opacity-75 hidden lg:inline"></span>
+                        <span class="user-tier text-xs"></span>
+                        <button class="auth-logout text-sm bg-red-600 px-3 py-1 rounded hover:bg-red-700 transition">Logout</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation -->
+            <div class="md:hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <a href="/" class="text-lg font-bold flex items-center hover:opacity-80 transition-opacity">
+                            <span class="mr-2">📉</span> Is This The Dip?
+                        </a>
+                        <h1 class="text-sm font-bold text-purple-200">📊 Dashboard</h1>
+                    </div>
+                    <button id="mobileMenuBtn" class="text-white p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Mobile Menu -->
+                <div id="mobileMenu" class="hidden mt-4 pb-4 border-t border-white border-opacity-20">
+                    <nav class="flex flex-col space-y-2 mt-4">
+                        <a href="/" class="text-sm py-2 hover:text-purple-200 transition-colors">🏠 Home</a>
+                        <a href="/leaderboard" class="text-sm py-2 hover:text-purple-200 transition-colors">🏆 Leaderboard</a>
+                        <a href="/pricing" class="text-sm py-2 hover:text-purple-200 transition-colors">💎 Pricing</a>
+                        <a href="/dashboard" class="text-sm py-2 text-purple-200">📊 Dashboard</a>
+                        <div class="flex flex-col space-y-2 pt-2 border-t border-white border-opacity-20">
+                            <span class="user-email text-sm opacity-75"></span>
+                            <span class="user-tier text-xs"></span>
+                            <button class="auth-logout text-sm bg-red-600 px-3 py-2 rounded text-left">Logout</button>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Welcome Section -->
+        <div class="mb-8 text-center md:text-left">
+            <h1 class="text-3xl md:text-4xl font-bold mb-2">Welcome to Your Dashboard</h1>
+            <p class="text-gray-400 px-4 md:px-0">Track your crypto analysis and manage your subscription</p>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 px-4 md:px-0">
+            <div class="stats-card bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center">
+                    <div class="text-3xl text-blue-400 mr-4">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold" id="totalSearches">0</div>
+                        <div class="text-gray-400 text-sm">Total Searches</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-card bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center">
+                    <div class="text-3xl text-green-400 mr-4">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold" id="successfulPredictions">0</div>
+                        <div class="text-gray-400 text-sm">Successful Predictions</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-card bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center">
+                    <div class="text-3xl text-yellow-400 mr-4">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold" id="moneySaved">$0</div>
+                        <div class="text-gray-400 text-sm">Money Saved</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-card bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center">
+                    <div class="text-3xl text-purple-400 mr-4">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold" id="dailySearches">0</div>
+                        <div class="text-gray-400 text-sm">Today's Searches</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 px-4 md:px-0">
+            <!-- Quick Analysis -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-xl font-bold mb-4">Quick Analysis</h3>
+                <div class="space-y-4">
+                    <input type="text" id="quickCrypto" placeholder="Enter cryptocurrency..."
+                        class="w-full px-4 py-3 bg-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    <button onclick="performQuickAnalysis()" 
+                        class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition">
+                        Analyze Now
+                    </button>
+                </div>
+                <div id="quickResult" class="mt-4 hidden">
+                    <!-- Quick result will be displayed here -->
+                </div>
+            </div>
+
+            <!-- Subscription Status -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-xl font-bold mb-4">Subscription Status</h3>
+                <div id="subscriptionInfo">
+                    <div class="flex items-center justify-between mb-4">
+                        <span>Current Plan:</span>
+                        <span class="font-bold" id="currentPlan">Loading...</span>
+                    </div>
+                    <div class="flex items-center justify-between mb-4" id="expiresSection" style="display: none;">
+                        <span>Expires:</span>
+                        <span id="expirationDate"></span>
+                    </div>
+                    <div class="flex items-center justify-between mb-4">
+                        <span>Searches Today:</span>
+                        <span id="todaySearchCount">0</span>
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <button id="upgradeBtn" class="upgrade-btn w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                        Upgrade Plan
+                    </button>
+                    <button id="manageSubscriptionBtn" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition" style="display: none;">
+                        Manage Subscription
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Searches -->
+        <div class="bg-gray-800 rounded-lg p-4 md:p-6 mb-8 mx-4 md:mx-0">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">Recent Searches</h3>
+                <a href="/" class="text-purple-400 hover:text-purple-300">
+                    <i class="fas fa-plus mr-1"></i> New Search
+                </a>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left py-2 text-sm md:text-base">Crypto</th>
+                            <th class="text-left py-2 text-sm md:text-base">Score</th>
+                            <th class="text-left py-2 text-sm md:text-base">Signal</th>
+                            <th class="text-left py-2 text-sm md:text-base hidden md:table-cell">Confidence</th>
+                            <th class="text-left py-2 text-sm md:text-base">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentSearches">
+                        <tr>
+                            <td colspan="5" class="text-center py-8 text-gray-400 text-sm">
+                                No searches yet. <a href="/" class="text-purple-400 hover:text-purple-300">Start analyzing!</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Premium Features (only for premium/pro users) -->
+        <div class="premium-feature hidden">
+            <div class="bg-gray-800 rounded-lg p-4 md:p-6 mb-8 mx-4 md:mx-0">
+                <h3 class="text-xl font-bold mb-6">Portfolio Analysis</h3>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold mb-3">Watchlist</h4>
+                        <div id="watchlist" class="space-y-2">
+                            <p class="text-gray-400">No cryptocurrencies in watchlist</p>
+                        </div>
+                        <button class="mt-3 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition">
+                            Add to Watchlist
+                        </button>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-3">Market Overview</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span>Fear & Greed:</span>
+                                <span id="dashboardFearGreed">Loading...</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Market Trend:</span>
+                                <span id="marketTrend">Analyzing...</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Best Opportunities:</span>
+                                <span id="bestOpportunities">3 found</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upgrade Prompt for Free Users -->
+        <div class="upgrade-prompt bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-4 md:p-6 border border-purple-600 mx-4 md:mx-0">
+            <div class="text-center">
+                <h3 class="text-2xl font-bold mb-4">🚀 Unlock Advanced Features</h3>
+                <p class="text-gray-300 mb-6">Get unlimited searches, detailed analysis, and premium insights</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-sm">
+                    <div class="flex items-center justify-center py-2">
+                        <i class="fas fa-infinity text-green-400 mr-2"></i>
+                        <span>Unlimited Searches</span>
+                    </div>
+                    <div class="flex items-center justify-center py-2">
+                        <i class="fas fa-brain text-green-400 mr-2"></i>
+                        <span>AI Explanations</span>
+                    </div>
+                    <div class="flex items-center justify-center py-2">
+                        <i class="fas fa-chart-bar text-green-400 mr-2"></i>
+                        <span>Portfolio Analysis</span>
+                    </div>
+                </div>
+                <a href="/pricing" class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                    Upgrade Now - From $9.99/month
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-12 md:mt-20 py-8 border-t border-gray-800">
+        <div class="container mx-auto px-4 text-center text-gray-500">
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6 mb-4">
+                <a href="/" class="hover:text-white text-sm">Home</a>
+                <a href="/leaderboard" class="hover:text-white text-sm">🏆 Leaderboard</a>
+                <a href="/pricing" class="hover:text-white text-sm">Pricing</a>
+                <a href="/dashboard" class="hover:text-white text-sm text-purple-400">📊 Dashboard</a>
+            </div>
+            <p class="text-xs md:text-sm px-4">© 2025 IsThisTheDip.xyz | Built with ❤️ for crypto traders</p>
+        </div>
+    </footer>
+
+    <!-- Load JavaScript -->
+    <script src="/js/auth.js"></script>
+    <script src="/js/realtime-service.js"></script>
+    <script src="/js/pro-charts.js"></script>
+    
+    <script>
+        class Dashboard {
+            constructor() {
+                this.user = null;
+                this.init();
+            }
+
+            async init() {
+                // Check authentication
+                const isAuth = await authManager.checkAuthStatus();
+                if (!isAuth) {
+                    window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+
+                this.user = authManager.user;
+                await this.loadDashboardData();
+                this.attachEventListeners();
+            }
+
+            async loadDashboardData() {
+                try {
+                    const response = await fetch('/api/dashboard', {
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.updateStats(data.stats);
+                        this.updateSubscriptionInfo(data.user);
+                        this.updateRecentSearches(data.recentSearches);
+                    } else {
+                        console.error('Failed to load dashboard data');
+                    }
+                } catch (error) {
+                    console.error('Dashboard data error:', error);
+                }
+            }
+
+            updateStats(stats) {
+                document.getElementById('totalSearches').textContent = stats.totalAnalyses || 0;
+                document.getElementById('successfulPredictions').textContent = stats.successfulPredictions || 0;
+                document.getElementById('moneySaved').textContent = `$${(stats.moneySaved || 0).toLocaleString()}`;
+                document.getElementById('dailySearches').textContent = stats.dailySearches || 0;
+            }
+
+            updateSubscriptionInfo(user) {
+                const currentPlan = document.getElementById('currentPlan');
+                const expiresSection = document.getElementById('expiresSection');
+                const expirationDate = document.getElementById('expirationDate');
+                const todaySearchCount = document.getElementById('todaySearchCount');
+                const upgradeBtn = document.getElementById('upgradeBtn');
+                const manageBtn = document.getElementById('manageSubscriptionBtn');
+
+                currentPlan.textContent = user.tier.toUpperCase();
+                currentPlan.className = `font-bold ${
+                    user.tier === 'pro' ? 'text-purple-400' :
+                    user.tier === 'premium' ? 'text-blue-400' : 'text-gray-400'
+                }`;
+
+                if (user.subscriptionExpires) {
+                    expiresSection.style.display = 'flex';
+                    expirationDate.textContent = new Date(user.subscriptionExpires).toLocaleDateString();
+                } else {
+                    expiresSection.style.display = 'none';
+                }
+
+                if (user.tier === 'free') {
+                    todaySearchCount.textContent = `${user.dailySearches || 0}/10`;
+                    upgradeBtn.style.display = 'block';
+                    manageBtn.style.display = 'none';
+                } else {
+                    todaySearchCount.textContent = user.dailySearches || 0;
+                    upgradeBtn.style.display = 'none';
+                    manageBtn.style.display = 'block';
+                }
+            }
+
+            updateRecentSearches(searches) {
+                const tbody = document.getElementById('recentSearches');
+                
+                if (!searches || searches.length === 0) {
+                    return;
+                }
+
+                tbody.innerHTML = searches.map(search => `
+                    <tr class="border-b border-gray-700">
+                        <td class="py-3 font-medium text-sm md:text-base">${search.crypto_symbol}</td>
+                        <td class="py-3 text-sm md:text-base">${search.score}/100</td>
+                        <td class="py-3">
+                            <span class="px-2 py-1 rounded text-xs font-bold ${
+                                search.score >= 70 ? 'bg-green-600' :
+                                search.score >= 40 ? 'bg-yellow-600' : 'bg-gray-600'
+                            }">
+                                ${search.score >= 70 ? 'BUY' : search.score >= 40 ? 'MOD' : 'WAIT'}
+                            </span>
+                        </td>
+                        <td class="py-3 hidden md:table-cell text-sm">${search.confidence || 'N/A'}</td>
+                        <td class="py-3 text-gray-400 text-xs md:text-sm">${new Date(search.timestamp).toLocaleDateString()}</td>
+                    </tr>
+                `).join('');
+            }
+
+            attachEventListeners() {
+                // Quick analysis
+                document.getElementById('quickCrypto').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.performQuickAnalysis();
+                    }
+                });
+
+                // Manage subscription
+                const manageBtn = document.getElementById('manageSubscriptionBtn');
+                if (manageBtn) {
+                    manageBtn.addEventListener('click', () => this.openCustomerPortal());
+                }
+            }
+
+            async performQuickAnalysis() {
+                const input = document.getElementById('quickCrypto');
+                const result = document.getElementById('quickResult');
+                const crypto = input.value.trim();
+
+                if (!crypto) return;
+
+                result.classList.remove('hidden');
+                result.innerHTML = '<div class="text-center py-4">Analyzing...</div>';
+
+                try {
+                    const response = await fetch('/api/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ crypto })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        result.innerHTML = `
+                            <div class="p-4 bg-gray-700 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-bold">${data.crypto?.name || crypto}</span>
+                                    <span class="text-2xl font-bold">${data.score}/100</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="px-2 py-1 rounded text-xs font-bold ${
+                                        data.score >= 70 ? 'bg-green-600' :
+                                        data.score >= 40 ? 'bg-yellow-600' : 'bg-gray-600'
+                                    }">
+                                        ${data.signal}
+                                    </span>
+                                    <span class="text-sm text-gray-400">${data.confidence || 'Low'} confidence</span>
+                                </div>
+                            </div>
+                        `;
+
+                        // Refresh dashboard data
+                        this.loadDashboardData();
+                    } else {
+                        result.innerHTML = `<div class="text-red-400 text-center py-4">${data.error}</div>`;
+                    }
+                } catch (error) {
+                    result.innerHTML = '<div class="text-red-400 text-center py-4">Network error</div>';
+                }
+
+                input.value = '';
+            }
+
+            async openCustomerPortal() {
+                try {
+                    const response = await fetch('/api/create-portal-session', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        window.location.href = data.url;
+                    } else {
+                        alert('Unable to open customer portal');
+                    }
+                } catch (error) {
+                    console.error('Portal error:', error);
+                    alert('Network error');
+                }
+            }
+        }
+
+        // Global function for quick analysis button
+        function performQuickAnalysis() {
+            dashboard.performQuickAnalysis();
+        }
+
+        // Mobile menu functionality
+        function initializeMobileMenu() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+
+                // Close mobile menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!mobileMenuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+            }
+        }
+
+        // Initialize dashboard and mobile menu
+        document.addEventListener('DOMContentLoaded', () => {
+            const dashboard = new Dashboard();
+            initializeMobileMenu();
+        });
+    </script>
+</body>
+
+</html>

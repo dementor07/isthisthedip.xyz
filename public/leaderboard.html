@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Dip Leaderboard - Is This The Dip?</title>
+    <meta name="description"
+        content="Real-time leaderboard of cryptocurrency dip scores. See which coins are the best buying opportunities right now.">
+    <meta property="og:title" content="Crypto Dip Leaderboard">
+    <meta property="og:description"
+        content="Live rankings of cryptocurrencies by dip score - find the best buying opportunities.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .rank-badge {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .rank-badge.silver {
+            background: linear-gradient(45deg, #C0C0C0, #A0A0A0);
+        }
+
+        .rank-badge.bronze {
+            background: linear-gradient(45deg, #CD7F32, #B8860B);
+        }
+
+        .pulse-slow {
+            animation: pulse 3s infinite;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <!-- Desktop Navigation -->
+            <div class="hidden md:flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-2xl font-bold flex items-center hover:opacity-80 transition-opacity">
+                        <span class="mr-2">📉</span> Is This The Dip?
+                    </a>
+                    <span class="text-lg opacity-75">|</span>
+                    <h1 class="text-xl font-bold">🏆 Leaderboard</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-sm hidden lg:block">
+                        <span class="opacity-75">F&G:</span>
+                        <span id="fearGreedIndex" class="font-bold">--</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="user-email text-sm opacity-75 hidden lg:inline"></span>
+                        <span class="user-tier text-xs"></span>
+                        <button class="auth-login text-sm bg-white bg-opacity-20 px-3 py-1 rounded hover:bg-opacity-30 transition">Login</button>
+                        <button class="auth-signup text-sm bg-purple-600 px-3 py-1 rounded hover:bg-purple-700 transition">Sign Up</button>
+                        <button class="auth-logout text-sm bg-red-600 px-3 py-1 rounded hover:bg-red-700 transition" style="display: none;">Logout</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation -->
+            <div class="md:hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <a href="/" class="text-lg font-bold flex items-center hover:opacity-80 transition-opacity">
+                            <span class="mr-2">📉</span> Is This The Dip?
+                        </a>
+                        <h1 class="text-sm font-bold text-purple-200">🏆 Leaderboard</h1>
+                    </div>
+                    <button id="mobileMenuBtn" class="text-white p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Mobile Menu -->
+                <div id="mobileMenu" class="hidden mt-4 pb-4 border-t border-white border-opacity-20">
+                    <nav class="flex flex-col space-y-2 mt-4">
+                        <a href="/" class="text-sm py-2 hover:text-purple-200 transition-colors">🏠 Home</a>
+                        <a href="/leaderboard" class="text-sm py-2 text-purple-200">🏆 Leaderboard</a>
+                        <a href="/pricing" class="text-sm py-2 hover:text-purple-200 transition-colors">💎 Pricing</a>
+                        <a href="/dashboard" class="text-sm py-2 hover:text-purple-200 transition-colors">📊 Dashboard</a>
+                        <div class="flex items-center justify-between py-2 text-sm">
+                            <span class="opacity-75">Fear & Greed:</span>
+                            <span id="fearGreedIndexMobile" class="font-bold">--</span>
+                        </div>
+                        <div class="flex flex-col space-y-2 pt-2 border-t border-white border-opacity-20">
+                            <span class="user-email text-sm opacity-75"></span>
+                            <span class="user-tier text-xs"></span>
+                            <button class="auth-login text-sm bg-white bg-opacity-20 px-3 py-2 rounded text-left">Login</button>
+                            <button class="auth-signup text-sm bg-purple-600 px-3 py-2 rounded text-left">Sign Up</button>
+                            <button class="auth-logout text-sm bg-red-600 px-3 py-2 rounded text-left" style="display: none;">Logout</button>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Controls -->
+        <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-4">
+                <h2 class="text-2xl font-bold">Top Cryptocurrency Dips</h2>
+                <div id="lastUpdated" class="text-sm text-gray-400"></div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <!-- Timeframe Filter -->
+                <select id="timeframeSelect" class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600">
+                    <option value="24h">Last 24 Hours</option>
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                </select>
+                
+                <!-- Refresh Button -->
+                <button id="refreshBtn" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="glass rounded-xl p-6 text-center">
+                <div class="text-3xl font-bold text-green-400" id="totalCoins">-</div>
+                <div class="text-gray-400">Coins Analyzed</div>
+            </div>
+            <div class="glass rounded-xl p-6 text-center">
+                <div class="text-3xl font-bold text-yellow-400" id="topDipName">-</div>
+                <div class="text-gray-400">Best Dip Score</div>
+            </div>
+            <div class="glass rounded-xl p-6 text-center">
+                <div class="text-3xl font-bold text-blue-400" id="topDipScore">-</div>
+                <div class="text-gray-400">Highest Score</div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="glass rounded-xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-800 bg-opacity-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left font-semibold">Rank</th>
+                            <th class="px-6 py-4 text-left font-semibold">Cryptocurrency</th>
+                            <th class="px-6 py-4 text-center font-semibold">Dip Score</th>
+                            <th class="px-6 py-4 text-center font-semibold">Signal</th>
+                            <th class="px-6 py-4 text-center font-semibold">Confidence</th>
+                            <th class="px-6 py-4 text-center font-semibold">Searches</th>
+                            <th class="px-6 py-4 text-center font-semibold">Last Updated</th>
+                            <th class="px-6 py-4 text-center font-semibold">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardTable" class="divide-y divide-gray-700">
+                        <!-- Loading rows -->
+                        <tr class="loading-row">
+                            <td colspan="8" class="px-6 py-8 text-center text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Loading leaderboard data...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-12">
+            <div class="text-6xl mb-4">📊</div>
+            <h3 class="text-xl font-semibold mb-2">No Data Available</h3>
+            <p class="text-gray-400 mb-4">No cryptocurrency analyses found for the selected timeframe.</p>
+            <a href="/" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg transition">
+                Analyze Your First Coin
+            </a>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 py-8 border-t border-gray-800">
+        <div class="container mx-auto px-4 text-center text-gray-500">
+            <div class="flex justify-center space-x-6 mb-4">
+                <a href="/" class="hover:text-white">Home</a>
+                <a href="/pricing" class="hover:text-white">Pricing</a>
+                <a href="/dashboard" class="hover:text-white">Dashboard</a>
+                <a href="/leaderboard" class="hover:text-white text-purple-400">Leaderboard</a>
+            </div>
+            <p>© 2025 IsThisTheDip.xyz | Real-time crypto dip analysis | Built with ❤️ for traders</p>
+        </div>
+    </footer>
+
+    <!-- Load JavaScript -->
+    <script src="/js/auth.js"></script>
+    <script>
+        class LeaderboardManager {
+            constructor() {
+                this.currentTimeframe = '24h';
+                this.init();
+            }
+
+            async init() {
+                this.setupEventListeners();
+                await this.loadLeaderboard();
+                this.startAutoRefresh();
+            }
+
+            setupEventListeners() {
+                document.getElementById('timeframeSelect').addEventListener('change', (e) => {
+                    this.currentTimeframe = e.target.value;
+                    this.loadLeaderboard();
+                });
+
+                document.getElementById('refreshBtn').addEventListener('click', () => {
+                    this.loadLeaderboard();
+                });
+            }
+
+            async loadLeaderboard() {
+                try {
+                    const refreshBtn = document.getElementById('refreshBtn');
+                    const spinner = refreshBtn.querySelector('.fa-sync-alt');
+                    
+                    // Show loading state
+                    spinner.classList.add('fa-spin');
+                    refreshBtn.disabled = true;
+
+                    const response = await fetch(`/api/leaderboard?timeframe=${this.currentTimeframe}&limit=50`);
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        this.renderLeaderboard(data);
+                        this.updateStats(data.metadata);
+                        document.getElementById('emptyState').classList.add('hidden');
+                    } else {
+                        throw new Error(data.error || 'Failed to load leaderboard');
+                    }
+                } catch (error) {
+                    console.error('Leaderboard error:', error);
+                    this.showError('Failed to load leaderboard data');
+                } finally {
+                    const refreshBtn = document.getElementById('refreshBtn');
+                    const spinner = refreshBtn.querySelector('.fa-sync-alt');
+                    spinner.classList.remove('fa-spin');
+                    refreshBtn.disabled = false;
+                }
+            }
+
+            renderLeaderboard(data) {
+                const tbody = document.getElementById('leaderboardTable');
+                
+                if (!data.leaderboard || data.leaderboard.length === 0) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    tbody.innerHTML = '';
+                    return;
+                }
+
+                tbody.innerHTML = data.leaderboard.map(coin => `
+                    <tr class="hover:bg-gray-800 hover:bg-opacity-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <span class="rank-badge ${this.getRankClass(coin.rank)} px-3 py-1 rounded-full text-sm">
+                                #${coin.rank}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="text-2xl">${this.getCoinIcon(coin.symbol)}</div>
+                                <div>
+                                    <div class="font-semibold">${coin.name}</div>
+                                    <div class="text-sm text-gray-400">${coin.symbol}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="text-2xl font-bold ${this.getScoreColor(coin.score)}">${coin.score}/100</div>
+                            <div class="w-full bg-gray-700 rounded-full h-2 mt-1">
+                                <div class="h-2 rounded-full ${this.getScoreBarColor(coin.score)}" style="width: ${coin.score}%"></div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-3 py-1 rounded-full text-sm font-bold ${this.getSignalClass(coin.signal)}">
+                                ${coin.signal}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center text-gray-300">${coin.confidence}</td>
+                        <td class="px-6 py-4 text-center text-gray-300">${coin.searchCount}</td>
+                        <td class="px-6 py-4 text-center text-gray-400 text-sm">
+                            ${this.formatTime(coin.lastAnalyzed)}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="window.open('/', '_blank')" class="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm transition">
+                                Analyze
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            updateStats(metadata) {
+                document.getElementById('totalCoins').textContent = metadata.totalCoins;
+                document.getElementById('topDipName').textContent = metadata.topDip?.symbol || '-';
+                document.getElementById('topDipScore').textContent = metadata.topDip?.score || '-';
+                document.getElementById('lastUpdated').textContent = `Updated: ${this.formatTime(metadata.lastUpdated)}`;
+            }
+
+            getRankClass(rank) {
+                if (rank === 1) return '';
+                if (rank === 2) return 'silver';
+                if (rank === 3) return 'bronze';
+                return 'bg-gray-600';
+            }
+
+            getScoreColor(score) {
+                if (score >= 70) return 'text-green-400';
+                if (score >= 40) return 'text-yellow-400';
+                return 'text-red-400';
+            }
+
+            getScoreBarColor(score) {
+                if (score >= 70) return 'bg-green-400';
+                if (score >= 40) return 'bg-yellow-400';
+                return 'bg-red-400';
+            }
+
+            getSignalClass(signal) {
+                switch(signal) {
+                    case 'BUY': return 'bg-green-600 text-white';
+                    case 'MAYBE': return 'bg-yellow-600 text-black';
+                    case 'WAIT': return 'bg-red-600 text-white';
+                    default: return 'bg-gray-600 text-white';
+                }
+            }
+
+            getCoinIcon(symbol) {
+                const icons = {
+                    'BTC': '₿',
+                    'ETH': 'Ξ',
+                    'ADA': '₳',
+                    'SOL': '◎',
+                    'DOT': '●',
+                    'DOGE': 'Ð'
+                };
+                return icons[symbol] || '◈';
+            }
+
+            formatTime(timestamp) {
+                const date = new Date(timestamp);
+                const now = new Date();
+                const diff = (now - date) / 1000 / 60; // minutes
+
+                if (diff < 1) return 'Just now';
+                if (diff < 60) return `${Math.floor(diff)}m ago`;
+                if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+                return `${Math.floor(diff / 1440)}d ago`;
+            }
+
+            showError(message) {
+                const tbody = document.getElementById('leaderboardTable');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-red-400">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>${message}
+                        </td>
+                    </tr>
+                `;
+            }
+
+            startAutoRefresh() {
+                // Auto-refresh every 2 minutes
+                setInterval(() => {
+                    this.loadLeaderboard();
+                }, 120000);
+            }
+        }
+
+        // Mobile menu functionality
+        function initializeMobileMenu() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+
+                // Close mobile menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!mobileMenuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+            }
+        }
+
+        // Initialize leaderboard
+        document.addEventListener('DOMContentLoaded', () => {
+            new LeaderboardManager();
+            initializeMobileMenu();
+        });
+    </script>
+</body>
+
+</html>
