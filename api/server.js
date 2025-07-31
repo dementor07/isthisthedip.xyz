@@ -1264,4 +1264,10 @@ process.on('unhandledRejection', (reason, promise) => {
   gracefulShutdown('unhandledRejection');
 });
 
-startServer();
+// For Vercel serverless deployment
+if (process.env.NODE_ENV === 'production' && process.env.VERCEL) {
+  module.exports = app;
+} else {
+  // For local development
+  startServer();
+}
