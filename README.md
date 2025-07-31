@@ -2,7 +2,7 @@
 
 > **Real-time cryptocurrency dip analysis with 1-second charts, AI sentiment analysis, and professional technical indicators**
 
-[![Version](https://img.shields.io/badge/version-3.0-blue.svg)](https://github.com/yourusername/isthisthedip.xyz)
+[![Version](https://img.shields.io/badge/version-3.0-blue.svg)](https://github.com/dementor07/isthisthedip.xyz)
 [![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
