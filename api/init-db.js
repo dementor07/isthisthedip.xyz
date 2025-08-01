@@ -39,28 +39,55 @@ export default async function handler(req, res) {
       const userCount = await prisma.user.count();
       console.log('✅ Users table exists, count:', userCount);
       
-      // If we can count users, the schema is already initialized
-      console.log('Database schema is already initialized!');
+      // Create hardcoded admin user if it doesn't exist
+      const adminEmail = 'admin@isthisthedip.xyz';
+      const adminPassword = 'CryptoDipAdmin2025!';
+      
+      const existingAdmin = await prisma.user.findUnique({
+        where: { email: adminEmail }
+      });
+      
+      if (!existingAdmin) {
+        console.log('Creating hardcoded admin user...');
+        const bcrypt = await import('bcrypt');
+        const passwordHash = await bcrypt.hash(adminPassword, 12);
+        
+        const adminUser = await prisma.user.create({
+          data: {
+            email: adminEmail,
+            passwordHash: passwordHash,
+            tier: 'pro' // Give admin pro tier
+          }
+        });
+        
+        console.log('✅ Admin user created:', adminUser.email);
+      } else {
+        console.log('✅ Admin user already exists');
+      }
       
     } catch (error) {
       console.log('Schema may not exist, error:', error.message);
-      
-      // Try to create an admin user, which will fail if schema doesn't exist
-      // This is a way to test schema existence without raw DDL
       throw new Error('Database schema not initialized. Please run "npx prisma db push" locally or contact support.');
     }
 
     await prisma.$disconnect();
 
+    const finalUserCount = await prisma.user.count();
+    
     return res.status(200).json({
       success: true,
-      message: 'Database schema is ready',
-      schema_status: 'already_initialized',
-      user_count: userCount,
+      message: 'Database schema is ready with admin user',
+      schema_status: 'initialized_with_admin',
+      user_count: finalUserCount,
+      admin_credentials: {
+        email: 'admin@isthisthedip.xyz',
+        password: 'CryptoDipAdmin2025!',
+        tier: 'pro'
+      },
       next_steps: [
-        'Database is ready for user registration',
-        'You can create accounts via /signup',
-        'Admin account can be created through registration'
+        'Use admin credentials to login',
+        'Admin has pro tier access to all features',
+        'Additional users can register via /signup'
       ]
     });
 
