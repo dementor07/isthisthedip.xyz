@@ -1,4 +1,6 @@
 // Vercel serverless function for leaderboard
+const { getLeaderboard } = require('./prisma-utils');
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,23 +16,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Mock leaderboard data
-    const mockData = {
-      leaderboard: [
-        { rank: 1, symbol: 'BTC', name: 'Bitcoin', score: 85, signal: 'BUY', confidence: 'High', searchCount: 150, lastAnalyzed: new Date() },
-        { rank: 2, symbol: 'ETH', name: 'Ethereum', score: 72, signal: 'BUY', confidence: 'High', searchCount: 120, lastAnalyzed: new Date() },
-        { rank: 3, symbol: 'SOL', name: 'Solana', score: 68, signal: 'MAYBE', confidence: 'Medium', searchCount: 90, lastAnalyzed: new Date() },
-        { rank: 4, symbol: 'ADA', name: 'Cardano', score: 55, signal: 'MAYBE', confidence: 'Medium', searchCount: 75, lastAnalyzed: new Date() },
-        { rank: 5, symbol: 'DOGE', name: 'Dogecoin', score: 42, signal: 'WAIT', confidence: 'Low', searchCount: 60, lastAnalyzed: new Date() }
-      ],
-      metadata: {
-        totalCoins: 5,
-        topDip: { symbol: 'BTC', score: 85 },
-        lastUpdated: new Date()
-      }
-    };
+    const { timeframe = '24h', limit = 50 } = req.query;
     
-    return res.status(200).json(mockData);
+    // Get leaderboard data from database
+    const leaderboard = await getLeaderboard(timeframe, parseInt(limit));
+    
+    const metadata = {
+      totalCoins: leaderboard.length,
+      topDip: leaderboard.length > 0 ? { 
+        symbol: leaderboard[0].symbol, 
+        score: leaderboard[0].score 
+      } : null,
+      lastUpdated: new Date()
+    };
+
+    return res.status(200).json({
+      leaderboard: leaderboard,
+      metadata: metadata
+    });
+
   } catch (error) {
     console.error('Leaderboard error:', error);
     return res.status(500).json({ error: 'Leaderboard failed' });

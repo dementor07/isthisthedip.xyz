@@ -6,20 +6,32 @@
   },
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
       "source": "/dashboard",
-      "destination": "/public/dashboard.html"
+      "destination": "/dashboard.html"
     },
     {
       "source": "/leaderboard", 
-      "destination": "/public/leaderboard.html"
+      "destination": "/leaderboard.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/signup",
+      "destination": "/signup.html"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/pricing.html"
     },
     {
       "source": "/js/(.*)",
-      "destination": "/public/js/$1"
-    },
-    {
-      "source": "/",
-      "destination": "/public/index.html"
+      "destination": "/js/$1"
     }
   ]
 }

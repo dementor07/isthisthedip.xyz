@@ -6,9 +6,15 @@
   "scripts": {
     "start": "node api/server.js",
     "dev": "nodemon api/server.js",
-    "init-db": "node api/database.js"
+    "init-db": "node api/database.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@prisma/client": "^5.7.1",
     "axios": "^1.6.2",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
@@ -21,6 +27,7 @@
     "node-cron": "^3.0.3",
     "sqlite3": "^5.1.6",
     "pg": "^8.11.3",
+    "prisma": "^5.7.1",
     "stripe": "^14.7.0",
     "ws": "^8.18.3"
   },
