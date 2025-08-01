@@ -1,5 +1,5 @@
 // Vercel serverless function for crypto analysis
-const { authenticateToken, getUserById, saveAnalysis, updateUserSearches } = require('./prisma-utils');
+import { authenticateToken, getUserById, saveAnalysis, updateUserSearches } from './prisma-utils.js';
 
 export default async function handler(req, res) {
   // Set CORS headers

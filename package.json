@@ -2,6 +2,7 @@
   "name": "crypto-dip-checker-pro",
   "version": "1.0.0",
   "description": "Professional crypto dip analysis SaaS platform",
+  "type": "module",
   "main": "api/server.js",
   "scripts": {
     "start": "node api/server.js",

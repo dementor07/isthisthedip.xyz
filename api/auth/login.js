@@ -1,5 +1,5 @@
 // Vercel serverless function for user login
-const { getUserByEmail, verifyPassword, generateJWT } = require('../prisma-utils');
+import { getUserByEmail, verifyPassword, generateJWT } from '../prisma-utils.js';
 
 export default async function handler(req, res) {
   // Set CORS headers

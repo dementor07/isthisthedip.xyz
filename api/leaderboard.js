@@ -1,5 +1,5 @@
 // Vercel serverless function for leaderboard
-const { getLeaderboard } = require('./prisma-utils');
+import { getLeaderboard } from './prisma-utils.js';
 
 export default async function handler(req, res) {
   // Set CORS headers

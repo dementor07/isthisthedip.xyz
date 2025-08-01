@@ -1,7 +1,7 @@
 // Prisma database utilities for serverless functions
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 // Global Prisma client for serverless optimization
 let prisma;
@@ -264,7 +264,7 @@ function authenticateToken(req) {
   return verifyJWT(token);
 }
 
-module.exports = {
+export {
   getPrismaClient,
   createUser,
   getUserByEmail,

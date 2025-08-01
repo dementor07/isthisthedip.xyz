@@ -1,5 +1,5 @@
 // Vercel serverless function for dashboard
-const { authenticateToken, getUserById, getDashboardStats, getRecentAnalyses } = require('./prisma-utils');
+import { authenticateToken, getUserById, getDashboardStats, getRecentAnalyses } from './prisma-utils.js';
 
 export default async function handler(req, res) {
   // Set CORS headers

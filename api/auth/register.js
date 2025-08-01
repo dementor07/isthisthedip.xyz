@@ -1,5 +1,5 @@
 // Vercel serverless function for user registration
-const { createUser, generateJWT } = require('../prisma-utils');
+import { createUser, generateJWT } from '../prisma-utils.js';
 
 export default async function handler(req, res) {
   // Set CORS headers

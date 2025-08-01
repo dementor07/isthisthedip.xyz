@@ -1,5 +1,5 @@
 // Vercel serverless function for getting current user
-const { authenticateToken, getUserById } = require('../prisma-utils');
+import { authenticateToken, getUserById } from '../prisma-utils.js';
 
 export default async function handler(req, res) {
   // Set CORS headers
