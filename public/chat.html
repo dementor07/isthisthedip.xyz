@@ -202,7 +202,11 @@
                     });
                     
                     if (response.ok) {
-                        this.messages = await response.json();
+                        const data = await response.json();
+                        // Ensure we always have an array
+                        this.messages = Array.isArray(data.messages) ? data.messages : 
+                                       Array.isArray(data) ? data : [];
+                        console.log('Loaded messages:', this.messages);
                         this.renderMessages();
                     } else {
                         throw new Error('Failed to load messages');
@@ -324,7 +328,7 @@
                 sendBtn.textContent = 'Sending...';
 
                 try {
-                    const response = await fetch('/api/chat/message', {
+                    const response = await fetch('/api/auth?action=chat-message', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -334,7 +338,8 @@
                     });
 
                     if (response.ok) {
-                        const newMessage = await response.json();
+                        const data = await response.json();
+                        const newMessage = data.message || data;
                         this.messages.push(newMessage);
                         this.renderMessages();
                         messageInput.value = '';
@@ -393,12 +398,14 @@
                 // Poll for new messages every 10 seconds
                 setInterval(async () => {
                     try {
-                        const response = await fetch('/api/chat/messages?limit=50', {
+                        const response = await fetch('/api/auth?action=chat-messages&limit=50', {
                             credentials: 'include'
                         });
                         
                         if (response.ok) {
-                            const messages = await response.json();
+                            const data = await response.json();
+                            const messages = Array.isArray(data.messages) ? data.messages : 
+                                           Array.isArray(data) ? data : [];
                             if (messages.length !== this.messages.length) {
                                 this.messages = messages;
                                 this.renderMessages();
