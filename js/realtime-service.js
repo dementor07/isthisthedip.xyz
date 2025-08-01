@@ -78,7 +78,7 @@ class RealTimeService {
 
   async fetchLivePriceData(crypto) {
     try {
-      const response = await fetch(`/api/live-price/${encodeURIComponent(crypto)}`, {
+      const response = await fetch(`/api/live-price?crypto=${encodeURIComponent(crypto)}`, {
         credentials: 'include'
       });
 
