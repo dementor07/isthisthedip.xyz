@@ -206,7 +206,10 @@
                     
                     if (response.ok) {
                         const data = await response.json();
-                        this.messages = data.messages || data;
+                        // Ensure we always have an array
+                        this.messages = Array.isArray(data.messages) ? data.messages : 
+                                       Array.isArray(data) ? data : [];
+                        console.log('Loaded messages:', this.messages);
                         this.renderMessages();
                     } else {
                         throw new Error('Failed to load messages');
@@ -264,7 +267,7 @@
 
             async loadStats() {
                 try {
-                    const response = await fetch('/api/chat?action=stats', {
+                    const response = await fetch('/api/auth?action=chat-stats', {
                         credentials: 'include'
                     });
                     
@@ -385,7 +388,8 @@
                     });
 
                     if (response.ok) {
-                        const newMessage = await response.json();
+                        const data = await response.json();
+                        const newMessage = data.message || data;
                         this.messages.push(newMessage);
                         this.renderMessages();
                         messageInput.value = '';
@@ -444,12 +448,14 @@
                 // Poll for new messages every 10 seconds
                 setInterval(async () => {
                     try {
-                        const response = await fetch('/api/chat/messages?limit=50', {
+                        const response = await fetch('/api/auth?action=chat-messages&limit=50', {
                             credentials: 'include'
                         });
                         
                         if (response.ok) {
-                            const messages = await response.json();
+                            const data = await response.json();
+                            const messages = Array.isArray(data.messages) ? data.messages : 
+                                           Array.isArray(data) ? data : [];
                             if (messages.length !== this.messages.length) {
                                 this.messages = messages;
                                 this.renderMessages();
