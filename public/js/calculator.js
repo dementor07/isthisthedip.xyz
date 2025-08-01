@@ -926,12 +926,31 @@ class CryptoCalculator {
   updateMarketIndicators(marketData) {
     // Update Fear & Greed index in header
     const fearGreedElement = document.getElementById('fearGreedIndex');
-    if (fearGreedElement && marketData.fearGreed) {
-      fearGreedElement.textContent = `${marketData.fearGreed}/100`;
-      fearGreedElement.className = `font-bold ${
-        marketData.fearGreed < 25 ? 'text-green-400' :
-        marketData.fearGreed > 75 ? 'text-red-400' : 'text-yellow-400'
+    const fearGreedMobileElement = document.getElementById('fearGreedIndexMobile');
+    
+    if (marketData.fearGreed) {
+      const fearGreedValue = typeof marketData.fearGreed === 'object' ? 
+        marketData.fearGreed.value : marketData.fearGreed;
+      const fearGreedClass = typeof marketData.fearGreed === 'object' ? 
+        marketData.fearGreed.classification : '';
+      
+      const displayText = fearGreedClass ? 
+        `${fearGreedValue} (${fearGreedClass})` : 
+        `${fearGreedValue}/100`;
+      
+      const colorClass = `font-bold ${
+        fearGreedValue < 25 ? 'text-green-400' :
+        fearGreedValue > 75 ? 'text-red-400' : 'text-yellow-400'
       }`;
+      
+      if (fearGreedElement) {
+        fearGreedElement.textContent = displayText;
+        fearGreedElement.className = colorClass;
+      }
+      if (fearGreedMobileElement) {
+        fearGreedMobileElement.textContent = displayText;
+        fearGreedMobileElement.className = colorClass;
+      }
     }
 
     // Update any market data displays in detailed analysis
