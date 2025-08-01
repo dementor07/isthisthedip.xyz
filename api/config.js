@@ -28,7 +28,7 @@ module.exports = {
     ALPHA_VANTAGE: 'https://www.alphavantage.co/query',
     HUGGING_FACE: 'https://api-inference.huggingface.co/models/ProsusAI/finbert',
     NEWS_API: 'https://newsapi.org/v2/everything',
-    FEAR_GREED: 'https://api.alternative.me/fng'
+    FEAR_GREED: 'https://api.alternative.me/fng/'
   },
   
   // Rate Limits

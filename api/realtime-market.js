@@ -60,7 +60,11 @@ async function fetchTopCoinsData() {
 
 async function fetchFearGreedIndex() {
   try {
-    const response = await fetch('https://api.alternative.me/fng?limit=1');
+    const response = await fetch('https://api.alternative.me/fng/');
+    if (!response.ok) {
+      console.error('Fear & Greed API error:', response.status);
+      return { value: 50, classification: 'Neutral' };
+    }
     const data = await response.json();
     return {
       value: parseInt(data.data[0].value),

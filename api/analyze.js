@@ -327,9 +327,22 @@ async function getCoinGeckoSimplePrice(crypto) {
 }
 
 async function getFearGreedIndex() {
-    const response = await fetch('https://api.alternative.me/fng?limit=1');
-    const data = await response.json();
-    return { value: parseInt(data.data[0].value) };
+    try {
+        const response = await fetch('https://api.alternative.me/fng/');
+        if (!response.ok) {
+            console.error('Fear & Greed API error:', response.status);
+            return { value: 50 }; // Default neutral value
+        }
+        const data = await response.json();
+        return { 
+            value: parseInt(data.data[0].value),
+            classification: data.data[0].value_classification,
+            timestamp: data.data[0].timestamp
+        };
+    } catch (error) {
+        console.error('Error fetching Fear & Greed Index:', error);
+        return { value: 50 }; // Default neutral value
+    }
 }
 
 async function getAlphaVantageTechnicals(crypto) {
