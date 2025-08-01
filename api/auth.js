@@ -30,6 +30,8 @@ export default async function handler(req, res) {
         return await handleChatMessages(req, res);
       case 'chat-stats':
         return await handleChatStats(req, res);
+      case 'chat-delete':
+        return await handleChatDelete(req, res);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -296,5 +298,41 @@ async function handleChatStats(req, res) {
   } catch (error) {
     console.error('Error fetching chat stats:', error);
     return res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+}
+
+async function handleChatDelete(req, res) {
+  if (req.method !== 'DELETE') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    // Authenticate user
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { messageId } = req.query;
+    if (!messageId) {
+      return res.status(400).json({ error: 'Message ID required' });
+    }
+
+    // Get user details
+    const user = await getUserById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    // For now, just return success (since we're using mock data)
+    // In a real implementation, you'd check if user owns the message or is admin
+    return res.status(200).json({
+      success: true,
+      message: 'Message deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting chat message:', error);
+    return res.status(500).json({ error: 'Failed to delete message' });
   }
 }

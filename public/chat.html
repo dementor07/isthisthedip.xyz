@@ -362,12 +362,13 @@
                 if (!confirm('Are you sure you want to delete this message?')) return;
 
                 try {
-                    const response = await fetch(`/api/chat/message/${messageId}`, {
+                    const response = await fetch(`/api/auth?action=chat-delete&messageId=${messageId}`, {
                         method: 'DELETE',
                         credentials: 'include'
                     });
 
                     if (response.ok) {
+                        // Remove message from local array
                         this.messages = this.messages.filter(m => m.id !== messageId);
                         this.renderMessages();
                         await this.loadStats();
@@ -379,6 +380,14 @@
                     console.error('Delete message failed:', error);
                     this.showError('Failed to delete message');
                 }
+            }
+
+            clearAllMessages() {
+                if (!confirm('Are you sure you want to clear all mock messages? This will only clear messages locally.')) return;
+                
+                this.messages = [];
+                this.renderMessages();
+                this.showError('All messages cleared. Send a new message to test the functionality!');
             }
 
             async logout() {
