@@ -134,6 +134,34 @@
                 await this.loadStats();
                 this.setupEventListeners();
                 this.startPolling();
+                
+                // Fallback: If user appears logged in but currentUser not set, try to show form
+                setTimeout(() => {
+                    this.ensureMessageFormVisible();
+                }, 1000);
+            }
+            
+            ensureMessageFormVisible() {
+                // Check if user appears to be logged in based on page elements
+                const logoutBtn = document.getElementById('logout-btn');
+                const messageForm = document.getElementById('message-form');
+                
+                if (logoutBtn && !logoutBtn.classList.contains('hidden') && 
+                    messageForm && messageForm.classList.contains('hidden')) {
+                    
+                    console.log('User appears logged in but message form hidden, showing form...');
+                    messageForm.classList.remove('hidden');
+                    
+                    // Try to get user info from the page
+                    const userName = document.getElementById('user-name');
+                    if (userName && userName.textContent && !this.currentUser) {
+                        this.currentUser = {
+                            email: userName.textContent + '@example.com',
+                            tier: 'free'
+                        };
+                        console.log('Set fallback currentUser:', this.currentUser);
+                    }
+                }
             }
 
             async checkAuth() {
