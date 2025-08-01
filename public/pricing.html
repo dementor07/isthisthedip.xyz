@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - Is This The Dip? | Professional Crypto Analysis</title>
+    <meta name="description" content="Choose your plan for professional crypto dip analysis. Free tier available with premium features for serious traders.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .pricing-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .popular-badge {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <a href="/" class="text-3xl font-bold flex items-center">
+                    <span class="mr-2">📉</span> Is This The Dip?
+                </a>
+                <div class="flex items-center space-x-2">
+                    <span class="user-email text-sm opacity-75"></span>
+                    <span class="user-tier"></span>
+                    <button class="auth-login text-sm bg-white bg-opacity-20 px-3 py-1 rounded">Login</button>
+                    <button class="auth-signup text-sm bg-purple-600 px-3 py-1 rounded">Sign Up</button>
+                    <button class="auth-logout text-sm bg-red-600 px-3 py-1 rounded" style="display: none;">Logout</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-12">
+        <!-- Hero Section -->
+        <div class="text-center mb-16">
+            <h1 class="text-5xl font-bold mb-4">Choose Your Plan</h1>
+            <p class="text-xl text-gray-400 mb-8">
+                Start free, upgrade when you're ready for advanced analysis
+            </p>
+            <div class="inline-flex bg-gray-800 rounded-lg p-1">
+                <button class="billing-toggle active px-4 py-2 rounded-md transition" data-billing="monthly">Monthly</button>
+                <button class="billing-toggle px-4 py-2 rounded-md transition" data-billing="yearly">
+                    Yearly <span class="text-green-400 text-sm">(Save 20%)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Pricing Cards -->
+        <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
+            <!-- Free Plan -->
+            <div class="pricing-card bg-gray-800 rounded-2xl p-8 border border-gray-700">
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold mb-2">Free</h3>
+                    <div class="text-4xl font-bold mb-2">$0</div>
+                    <div class="text-gray-400">Forever</div>
+                </div>
+                
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>10 searches per day (no signup required)</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Basic dip score (0-100)</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>BUY/WAIT signals</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Top 20 cryptocurrencies</span>
+                    </li>
+                    <li class="flex items-center text-gray-500">
+                        <i class="fas fa-times mr-3"></i>
+                        <span>Detailed analysis</span>
+                    </li>
+                    <li class="flex items-center text-gray-500">
+                        <i class="fas fa-times mr-3"></i>
+                        <span>AI explanations</span>
+                    </li>
+                </ul>
+                
+                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition">
+                    Get Started Free
+                </button>
+            </div>
+
+            <!-- Premium Plan -->
+            <div class="pricing-card bg-gray-800 rounded-2xl p-8 border-2 border-purple-500 relative">
+                <div class="popular-badge absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full text-white text-sm font-bold">
+                    Most Popular
+                </div>
+                
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold mb-2">Premium</h3>
+                    <div class="text-4xl font-bold mb-2">
+                        <span class="monthly-price">$9.99</span>
+                        <span class="yearly-price hidden">$7.99</span>
+                    </div>
+                    <div class="text-gray-400">per month</div>
+                </div>
+                
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Unlimited searches</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>All cryptocurrencies (500+)</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Detailed score breakdown</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>AI-powered explanations</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Confidence levels</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Email alerts</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Portfolio analysis (10 cryptos)</span>
+                    </li>
+                </ul>
+                
+                <button class="subscribe-btn w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition" data-tier="premium">
+                    Start 7-Day Free Trial
+                </button>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card bg-gray-800 rounded-2xl p-8 border border-gray-700">
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold mb-2">Pro</h3>
+                    <div class="text-4xl font-bold mb-2">
+                        <span class="monthly-price">$19.99</span>
+                        <span class="yearly-price hidden">$15.99</span>
+                    </div>
+                    <div class="text-gray-400">per month</div>
+                </div>
+                
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span><strong>Everything in Premium</strong></span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Advanced technical indicators</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Custom alert thresholds</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>API access with personal key</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Historical backtesting</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Priority support</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-check text-green-400 mr-3"></i>
+                        <span>Early access to features</span>
+                    </li>
+                </ul>
+                
+                <button class="subscribe-btn w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-lg transition" data-tier="pro">
+                    Start 7-Day Free Trial
+                </button>
+            </div>
+        </div>
+
+        <!-- Feature Comparison -->
+        <div class="max-w-6xl mx-auto mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8">Feature Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full bg-gray-800 rounded-lg">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left p-4">Feature</th>
+                            <th class="text-center p-4">Free</th>
+                            <th class="text-center p-4">Premium</th>
+                            <th class="text-center p-4">Pro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-4">Daily Searches</td>
+                            <td class="text-center p-4">10 (no signup)</td>
+                            <td class="text-center p-4 text-green-400">Unlimited</td>
+                            <td class="text-center p-4 text-green-400">Unlimited</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-4">Supported Cryptocurrencies</td>
+                            <td class="text-center p-4">Top 20</td>
+                            <td class="text-center p-4 text-green-400">500+</td>
+                            <td class="text-center p-4 text-green-400">500+</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-4">Detailed Score Breakdown</td>
+                            <td class="text-center p-4 text-red-400">✗</td>
+                            <td class="text-center p-4 text-green-400">✓</td>
+                            <td class="text-center p-4 text-green-400">✓</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-4">AI Explanations</td>
+                            <td class="text-center p-4 text-red-400">✗</td>
+                            <td class="text-center p-4 text-green-400">✓</td>
+                            <td class="text-center p-4 text-green-400">✓</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-4">Portfolio Analysis</td>
+                            <td class="text-center p-4 text-red-400">✗</td>
+                            <td class="text-center p-4 text-green-400">10 cryptos</td>
+                            <td class="text-center p-4 text-green-400">Unlimited</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-4">API Access</td>
+                            <td class="text-center p-4 text-red-400">✗</td>
+                            <td class="text-center p-4 text-red-400">✗</td>
+                            <td class="text-center p-4 text-green-400">✓</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4">Support</td>
+                            <td class="text-center p-4">Community</td>
+                            <td class="text-center p-4">Email</td>
+                            <td class="text-center p-4 text-green-400">Priority</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Social Proof -->
+        <div class="max-w-4xl mx-auto mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8">Trusted by Crypto Traders</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-purple-400 mb-2">10,000+</div>
+                    <div class="text-gray-300">Analyses Performed</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-green-400 mb-2">73%</div>
+                    <div class="text-gray-300">Success Rate</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-blue-400 mb-2">$2.1M</div>
+                    <div class="text-gray-300">Money Saved</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+            <div class="space-y-6">
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-2">How accurate are the predictions?</h3>
+                    <p class="text-gray-300">Our AI-powered analysis has a 73% success rate in identifying profitable dip-buying opportunities, based on historical backtesting data.</p>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-2">Can I cancel anytime?</h3>
+                    <p class="text-gray-300">Yes! You can cancel your subscription at any time. Your access will continue until the end of your billing period.</p>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-2">What payment methods do you accept?</h3>
+                    <p class="text-gray-300">We accept all major credit cards and debit cards through our secure Stripe payment processor.</p>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-2">Is there a free trial?</h3>
+                    <p class="text-gray-300">Yes! All paid plans come with a 7-day free trial. No credit card required to start your free account.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 py-8 border-t border-gray-800">
+        <div class="container mx-auto px-4 text-center text-gray-500">
+            <div class="flex justify-center space-x-6 mb-4">
+                <a href="/" class="hover:text-white">Home</a>
+                <a href="/dashboard" class="hover:text-white">Dashboard</a>
+                <a href="#" class="hover:text-white">API</a>
+                <a href="#" class="hover:text-white">About</a>
+            </div>
+            <p>© 2025 IsThisTheDip.xyz | Not financial advice | Built with ❤️ for crypto traders</p>
+        </div>
+    </footer>
+
+    <!-- Load JavaScript -->
+    <script src="/js/auth.js"></script>
+    
+    <script>
+        class PricingManager {
+            constructor() {
+                this.stripe = Stripe('pk_test_your_publishable_key_here'); // Replace with actual key
+                this.billingPeriod = 'monthly';
+                this.init();
+            }
+
+            init() {
+                this.attachEventListeners();
+                this.updatePricing();
+            }
+
+            attachEventListeners() {
+                // Billing toggle
+                document.querySelectorAll('.billing-toggle').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.setBillingPeriod(e.target.dataset.billing);
+                    });
+                });
+
+                // Subscribe buttons
+                document.querySelectorAll('.subscribe-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const tier = e.target.dataset.tier;
+                        this.handleSubscription(tier);
+                    });
+                });
+            }
+
+            setBillingPeriod(period) {
+                this.billingPeriod = period;
+                
+                // Update active toggle
+                document.querySelectorAll('.billing-toggle').forEach(btn => {
+                    btn.classList.remove('active', 'bg-purple-600');
+                    if (btn.dataset.billing === period) {
+                        btn.classList.add('active', 'bg-purple-600');
+                    }
+                });
+
+                this.updatePricing();
+            }
+
+            updatePricing() {
+                const monthlyPrices = document.querySelectorAll('.monthly-price');
+                const yearlyPrices = document.querySelectorAll('.yearly-price');
+
+                if (this.billingPeriod === 'yearly') {
+                    monthlyPrices.forEach(el => el.classList.add('hidden'));
+                    yearlyPrices.forEach(el => el.classList.remove('hidden'));
+                } else {
+                    monthlyPrices.forEach(el => el.classList.remove('hidden'));
+                    yearlyPrices.forEach(el => el.classList.add('hidden'));
+                }
+            }
+
+            async handleSubscription(tier) {
+                if (!authManager.isAuthenticated()) {
+                    authManager.showLoginModal();
+                    return;
+                }
+
+                try {
+                    const button = event.target;
+                    button.disabled = true;
+                    button.textContent = 'Creating checkout...';
+
+                    const response = await fetch('/api/create-checkout-session', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ 
+                            tier,
+                            billing: this.billingPeriod 
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        // Redirect to Stripe Checkout
+                        window.location.href = data.url;
+                    } else {
+                        throw new Error(data.error || 'Failed to create checkout session');
+                    }
+                } catch (error) {
+                    console.error('Subscription error:', error);
+                    alert('Failed to start subscription. Please try again.');
+                    
+                    // Reset button
+                    const button = event.target;
+                    button.disabled = false;
+                    button.textContent = 'Start 7-Day Free Trial';
+                }
+            }
+        }
+
+        // Initialize pricing manager
+        const pricingManager = new PricingManager();
+
+        // Handle success/cancel redirects
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === 'true') {
+            // Show success message
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-600 text-white p-4 rounded-lg z-50';
+            successDiv.textContent = 'Subscription activated successfully!';
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+                window.location.href = '/dashboard';
+            }, 3000);
+        }
+
+        if (urlParams.get('canceled') === 'true') {
+            // Show canceled message
+            const cancelDiv = document.createElement('div');
+            cancelDiv.className = 'fixed top-4 right-4 bg-yellow-600 text-white p-4 rounded-lg z-50';
+            cancelDiv.textContent = 'Subscription canceled. You can try again anytime!';
+            document.body.appendChild(cancelDiv);
+            
+            setTimeout(() => cancelDiv.remove(), 5000);
+        }
+    </script>
+</body>
+
+</html>
