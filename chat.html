@@ -148,7 +148,7 @@
                 this.messages = [];
                 this.isInitialized = false;
                 this.pollingInterval = null;
-                this.baseApiUrl = '/api/chat';
+                // Using existing auth API endpoints for chat functionality
                 
                 console.log('🚀 Initializing IsThisTheDipChat...');
                 this.init();
@@ -236,7 +236,7 @@
             async loadMessages() {
                 try {
                     console.log('📥 Loading messages...');
-                    const response = await fetch(`${this.baseApiUrl}/messages?limit=50`, {
+                    const response = await fetch('/api/auth?action=chat-messages&limit=50', {
                         method: 'GET',
                         credentials: 'include'
                     });
@@ -281,7 +281,7 @@
 
             async loadStats() {
                 try {
-                    const response = await fetch(`${this.baseApiUrl}/stats`, {
+                    const response = await fetch('/api/auth?action=chat-stats', {
                         method: 'GET',
                         credentials: 'include'
                     });
@@ -538,7 +538,7 @@
                 sendBtn.textContent = 'Sending...';
 
                 try {
-                    const response = await fetch(`${this.baseApiUrl}/send`, {
+                    const response = await fetch('/api/auth?action=chat-message', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -577,7 +577,7 @@
                 if (!confirm('Are you sure you want to delete this message?')) return;
 
                 try {
-                    const response = await fetch(`${this.baseApiUrl}/delete?messageId=${messageId}`, {
+                    const response = await fetch(`/api/auth?action=chat-delete&messageId=${messageId}`, {
                         method: 'DELETE',
                         credentials: 'include'
                     });
