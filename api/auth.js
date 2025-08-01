@@ -1,193 +1,154 @@
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const config = require('./config');
+// Consolidated authentication API endpoint
+import { getUserByEmail, verifyPassword, generateJWT, createUser, authenticateToken, getUserById } from './prisma-utils.js';
 
-class AuthService {
-  static async hashPassword(password) {
-    return bcrypt.hash(password, 12);
+export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
 
-  static async comparePasswords(password, hash) {
-    return bcrypt.compare(password, hash);
-  }
+  const { action } = req.query;
 
-  static generateToken(userId, email) {
-    return jwt.sign(
-      { userId, email },
-      config.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-  }
-
-  static verifyToken(token) {
-    try {
-      return jwt.verify(token, config.JWT_SECRET);
-    } catch (error) {
-      return null;
+  try {
+    switch (action) {
+      case 'login':
+        return await handleLogin(req, res);
+      case 'register':
+        return await handleRegister(req, res);
+      case 'me':
+        return await handleMe(req, res);
+      case 'logout':
+        return await handleLogout(req, res);
+      default:
+        return res.status(400).json({ error: 'Invalid action' });
     }
-  }
-
-  static async register(db, email, password) {
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      throw new Error('Invalid email format');
-    }
-
-    // Validate password strength
-    if (password.length < 8) {
-      throw new Error('Password must be at least 8 characters long');
-    }
-
-    // Check if user already exists
-    const existingUser = await db.getUserByEmail(email);
-    if (existingUser) {
-      throw new Error('User already exists');
-    }
-
-    // Hash password and create user
-    const passwordHash = await this.hashPassword(password);
-    const result = await db.createUser(email, passwordHash);
-    
-    // Generate token
-    const token = this.generateToken(result.id, email);
-    
-    return {
-      userId: result.id,
-      email,
-      token,
-      tier: 'free'
-    };
-  }
-
-  static async login(db, email, password) {
-    // Find user
-    const user = await db.getUserByEmail(email);
-    if (!user) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Verify password
-    const isValid = await this.comparePasswords(password, user.password_hash);
-    if (!isValid) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Check subscription status
-    let tier = user.subscription_tier;
-    if (user.subscription_expires && new Date(user.subscription_expires) < new Date()) {
-      tier = 'free';
-      await db.run('UPDATE users SET subscription_tier = ? WHERE id = ?', ['free', user.id]);
-    }
-
-    // Generate token
-    const token = this.generateToken(user.id, user.email);
-    
-    return {
-      userId: user.id,
-      email: user.email,
-      token,
-      tier,
-      subscriptionExpires: user.subscription_expires
-    };
-  }
-
-  static authenticateToken(req, res, next) {
-    const token = req.cookies?.auth_token || req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ error: 'Access denied - no token provided' });
-    }
-
-    const decoded = AuthService.verifyToken(token);
-    if (!decoded) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-
-    req.user = decoded;
-    next();
-  }
-
-  static optionalAuth(req, res, next) {
-    const token = req.cookies?.auth_token || req.headers.authorization?.replace('Bearer ', '');
-    
-    if (token) {
-      const decoded = AuthService.verifyToken(token);
-      if (decoded) {
-        req.user = decoded;
-      }
-    }
-    
-    next();
-  }
-
-  static async checkUserTier(db, userId) {
-    if (!userId) return 'free';
-    
-    const user = await db.getUserById(userId);
-    if (!user) return 'free';
-    
-    // Check if subscription is still valid
-    if (user.subscription_expires && new Date(user.subscription_expires) < new Date()) {
-      await db.run('UPDATE users SET subscription_tier = ? WHERE id = ?', ['free', user.id]);
-      return 'free';
-    }
-    
-    return user.subscription_tier || 'free';
-  }
-
-  static async checkDailyLimit(db, userId, userTier, ipAddress) {
-    if (userTier !== 'free') {
-      return { allowed: true, remaining: 'unlimited' };
-    }
-
-    if (!userId) {
-      // IP-based limiting for anonymous users
-      return await this.checkIPBasedLimit(db, ipAddress);
-    }
-
-    const user = await db.getUserById(userId);
-    
-    // If user not found, fall back to IP-based limiting
-    if (!user) {
-      return await this.checkIPBasedLimit(db, ipAddress);
-    }
-    
-    const today = new Date().toISOString().split('T')[0];
-    
-    let searches = 0;
-    if (user.last_search_date === today) {
-      searches = user.daily_searches || 0;
-    }
-
-    const remaining = Math.max(0, config.RATE_LIMITS.FREE_DAILY_SEARCHES - searches);
-    
-    return {
-      allowed: remaining > 0,
-      remaining,
-      resetTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    };
-  }
-
-  static async checkIPBasedLimit(db, ipAddress) {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Check IP-based searches for today
-    const ipSearches = await db.all(
-      'SELECT COUNT(*) as count FROM search_logs WHERE ip_address = ? AND date(timestamp) = ?',
-      [ipAddress, today]
-    );
-    
-    const searchCount = ipSearches[0]?.count || 0;
-    const remaining = Math.max(0, config.RATE_LIMITS.FREE_DAILY_SEARCHES - searchCount);
-    
-    return {
-      allowed: remaining > 0,
-      remaining,
-      resetTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      message: remaining === 0 ? 'Sign up for unlimited searches' : null
-    };
+  } catch (error) {
+    console.error('Auth error:', error);
+    return res.status(500).json({ error: 'Authentication failed' });
   }
 }
 
-module.exports = AuthService;
+async function handleLogin(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  // Get user from database
+  const user = await getUserByEmail(email);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  // Verify password
+  const isValidPassword = await verifyPassword(password, user.passwordHash);
+  if (!isValidPassword) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  // Generate JWT token
+  const token = generateJWT(user);
+
+  // Set JWT cookie
+  res.setHeader('Set-Cookie', `auth=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+  
+  // Return user data (without password hash)
+  const { passwordHash, ...userResponse } = user;
+  
+  return res.status(200).json({
+    success: true,
+    user: userResponse
+  });
+}
+
+async function handleRegister(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+  }
+
+  try {
+    // Create user in database
+    const user = await createUser(email, password);
+
+    // Generate JWT token
+    const token = generateJWT(user);
+
+    // Set JWT cookie
+    res.setHeader('Set-Cookie', `auth=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+    
+    return res.status(200).json({
+      success: true,
+      user: user
+    });
+  } catch (error) {
+    if (error.message === 'Email already exists') {
+      return res.status(409).json({ error: 'Email already exists' });
+    }
+    throw error;
+  }
+}
+
+async function handleMe(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Verify JWT token
+  const decoded = authenticateToken(req);
+  
+  if (!decoded) {        
+    return res.status(200).json({ authenticated: false });
+  }
+
+  // Get fresh user data from database
+  const user = await getUserById(decoded.id);
+  
+  if (!user) {
+    return res.status(200).json({ authenticated: false });
+  }
+
+  return res.status(200).json({
+    authenticated: true,
+    user: user
+  });
+}
+
+async function handleLogout(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Clear auth cookie
+  res.setHeader('Set-Cookie', 'auth=; HttpOnly; Path=/; Max-Age=0');
+  
+  return res.status(200).json({
+    success: true,
+    message: 'Logged out successfully'
+  });
+}
