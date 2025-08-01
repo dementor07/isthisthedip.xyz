@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Chat - isthisthedip.xyz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .message-item {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .admin-badge {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+        }
+        .pro-badge {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+        .premium-badge {
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-gray-900">isthisthedip.xyz</a>
+                    <span class="ml-4 px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full">Community Chat</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="user-info" class="hidden">
+                        <span id="user-name" class="text-sm text-gray-700"></span>
+                        <span id="user-tier" class="ml-2 px-2 py-1 text-xs rounded-full"></span>
+                    </div>
+                    <button id="login-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        Login
+                    </button>
+                    <button id="logout-btn" class="hidden bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Chat Stats -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Community Discussion</h2>
+                <div id="chat-stats" class="flex items-center space-x-4 text-sm text-gray-600">
+                    <span id="total-messages">0 messages</span>
+                    <span id="active-users">0 users</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="bg-white rounded-lg shadow-sm mb-6">
+            <div class="p-6 border-b">
+                <h3 class="text-md font-medium text-gray-900">Messages</h3>
+            </div>
+            <div id="messages-container" class="max-h-96 overflow-y-auto p-4 space-y-4">
+                <div id="loading-messages" class="text-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p class="mt-2 text-gray-600">Loading messages...</p>
+                </div>
+                <div id="no-messages" class="hidden text-center py-8 text-gray-500">
+                    <p>No messages yet. Be the first to start the conversation!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div id="login-required" class="hidden text-center py-4">
+                <p class="text-gray-600 mb-4">Please login to participate in the chat</p>
+                <button onclick="window.location.href='/login'" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md">
+                    Login to Chat
+                </button>
+            </div>
+            
+            <div id="message-form" class="hidden">
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <textarea 
+                            id="message-input" 
+                            placeholder="Type your message here... (max 1000 characters)"
+                            class="w-full p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            rows="3"
+                            maxlength="1000"
+                        ></textarea>
+                        <div class="flex justify-between items-center mt-2">
+                            <span id="char-count" class="text-sm text-gray-500">0/1000</span>
+                            <button 
+                                id="send-btn" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled
+                            >
+                                Send Message
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ChatApp {
+            constructor() {
+                this.currentUser = null;
+                this.messages = [];
+                this.init();
+            }
+
+            async init() {
+                await this.checkAuth();
+                await this.loadMessages();
+                await this.loadStats();
+                this.setupEventListeners();
+                this.startPolling();
+            }
+
+            async checkAuth() {
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        this.currentUser = await response.json();
+                        this.updateUI();
+                    } else {
+                        this.currentUser = null;
+                        this.updateUI();
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    this.currentUser = null;
+                    this.updateUI();
+                }
+            }
+
+            updateUI() {
+                const userInfo = document.getElementById('user-info');
+                const userName = document.getElementById('user-name');
+                const userTier = document.getElementById('user-tier');
+                const loginBtn = document.getElementById('login-btn');
+                const logoutBtn = document.getElementById('logout-btn');
+                const loginRequired = document.getElementById('login-required');
+                const messageForm = document.getElementById('message-form');
+
+                if (this.currentUser) {
+                    userInfo.classList.remove('hidden');
+                    loginBtn.classList.add('hidden');
+                    logoutBtn.classList.remove('hidden');
+                    loginRequired.classList.add('hidden');
+                    messageForm.classList.remove('hidden');
+
+                    userName.textContent = this.currentUser.email.split('@')[0];
+                    
+                    // Set tier badge
+                    const tier = this.currentUser.subscription_tier;
+                    const isAdmin = this.currentUser.is_admin;
+                    
+                    if (isAdmin) {
+                        userTier.textContent = 'ADMIN';
+                        userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white admin-badge';
+                    } else if (tier === 'pro') {
+                        userTier.textContent = 'PRO';
+                        userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white pro-badge';
+                    } else if (tier === 'premium') {
+                        userTier.textContent = 'PREMIUM';
+                        userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white premium-badge';
+                    } else {
+                        userTier.textContent = 'FREE';
+                        userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-700';
+                    }
+                } else {
+                    userInfo.classList.add('hidden');
+                    loginBtn.classList.remove('hidden');
+                    logoutBtn.classList.add('hidden');
+                    loginRequired.classList.remove('hidden');
+                    messageForm.classList.add('hidden');
+                }
+            }
+
+            async loadMessages() {
+                try {
+                    const response = await fetch('/api/chat/messages?limit=50', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        this.messages = await response.json();
+                        this.renderMessages();
+                    } else {
+                        throw new Error('Failed to load messages');
+                    }
+                } catch (error) {
+                    console.error('Load messages failed:', error);
+                    this.showError('Failed to load messages');
+                } finally {
+                    document.getElementById('loading-messages').classList.add('hidden');
+                }
+            }
+
+            async loadStats() {
+                try {
+                    const response = await fetch('/api/chat/stats', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const stats = await response.json();
+                        document.getElementById('total-messages').textContent = `${stats.total_messages} messages`;
+                        document.getElementById('active-users').textContent = `${stats.active_users} users`;
+                    }
+                } catch (error) {
+                    console.error('Load stats failed:', error);
+                }
+            }
+
+            renderMessages() {
+                const container = document.getElementById('messages-container');
+                const noMessages = document.getElementById('no-messages');
+                
+                if (this.messages.length === 0) {
+                    noMessages.classList.remove('hidden');
+                    return;
+                }
+                
+                noMessages.classList.add('hidden');
+                
+                const messagesHTML = this.messages.map(message => this.renderMessage(message)).join('');
+                container.innerHTML = messagesHTML;
+                
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+            }
+
+            renderMessage(message) {
+                const date = new Date(message.timestamp);
+                const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const dateStr = date.toLocaleDateString();
+                
+                let tierBadge = '';
+                if (message.is_admin) {
+                    tierBadge = '<span class="admin-badge text-white px-2 py-1 text-xs rounded-full ml-2">ADMIN</span>';
+                } else if (message.user_tier === 'pro') {
+                    tierBadge = '<span class="pro-badge text-white px-2 py-1 text-xs rounded-full ml-2">PRO</span>';
+                } else if (message.user_tier === 'premium') {
+                    tierBadge = '<span class="premium-badge text-white px-2 py-1 text-xs rounded-full ml-2">PREMIUM</span>';
+                }
+
+                const canDelete = this.currentUser && (this.currentUser.is_admin || this.currentUser.id === message.user_id);
+                
+                return `
+                    <div class="message-item border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center">
+                                <span class="font-medium text-gray-900">${message.username}</span>
+                                ${tierBadge}
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-500">${dateStr} ${timeStr}</span>
+                                ${canDelete ? `<button onclick="chatApp.deleteMessage(${message.id})" class="text-red-600 hover:text-red-800 text-sm">Delete</button>` : ''}
+                            </div>
+                        </div>
+                        <p class="text-gray-800 whitespace-pre-wrap">${this.escapeHtml(message.message)}</p>
+                    </div>
+                `;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            setupEventListeners() {
+                const messageInput = document.getElementById('message-input');
+                const sendBtn = document.getElementById('send-btn');
+                const charCount = document.getElementById('char-count');
+                const loginBtn = document.getElementById('login-btn');
+                const logoutBtn = document.getElementById('logout-btn');
+
+                messageInput.addEventListener('input', () => {
+                    const length = messageInput.value.length;
+                    charCount.textContent = `${length}/1000`;
+                    sendBtn.disabled = length === 0 || length > 1000;
+                });
+
+                messageInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+
+                sendBtn.addEventListener('click', () => this.sendMessage());
+                loginBtn.addEventListener('click', () => window.location.href = '/login');
+                logoutBtn.addEventListener('click', () => this.logout());
+            }
+
+            async sendMessage() {
+                const messageInput = document.getElementById('message-input');
+                const sendBtn = document.getElementById('send-btn');
+                const message = messageInput.value.trim();
+
+                if (!message || !this.currentUser) return;
+
+                sendBtn.disabled = true;
+                sendBtn.textContent = 'Sending...';
+
+                try {
+                    const response = await fetch('/api/chat/message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ message })
+                    });
+
+                    if (response.ok) {
+                        const newMessage = await response.json();
+                        this.messages.push(newMessage);
+                        this.renderMessages();
+                        messageInput.value = '';
+                        document.getElementById('char-count').textContent = '0/1000';
+                        await this.loadStats();
+                    } else {
+                        const error = await response.json();
+                        this.showError(error.error || 'Failed to send message');
+                    }
+                } catch (error) {
+                    console.error('Send message failed:', error);
+                    this.showError('Failed to send message');
+                } finally {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = 'Send Message';
+                }
+            }
+
+            async deleteMessage(messageId) {
+                if (!confirm('Are you sure you want to delete this message?')) return;
+
+                try {
+                    const response = await fetch(`/api/chat/message/${messageId}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        this.messages = this.messages.filter(m => m.id !== messageId);
+                        this.renderMessages();
+                        await this.loadStats();
+                    } else {
+                        const error = await response.json();
+                        this.showError(error.error || 'Failed to delete message');
+                    }
+                } catch (error) {
+                    console.error('Delete message failed:', error);
+                    this.showError('Failed to delete message');
+                }
+            }
+
+            async logout() {
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    this.currentUser = null;
+                    this.updateUI();
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                }
+            }
+
+            startPolling() {
+                // Poll for new messages every 10 seconds
+                setInterval(async () => {
+                    try {
+                        const response = await fetch('/api/chat/messages?limit=50', {
+                            credentials: 'include'
+                        });
+                        
+                        if (response.ok) {
+                            const messages = await response.json();
+                            if (messages.length !== this.messages.length) {
+                                this.messages = messages;
+                                this.renderMessages();
+                                await this.loadStats();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Polling failed:', error);
+                    }
+                }, 10000);
+            }
+
+            showError(message) {
+                alert(message); // Simple error display
+            }
+        }
+
+        // Initialize the chat app
+        const chatApp = new ChatApp();
+    </script>
+</body>
+</html>

@@ -25,8 +25,16 @@
       "destination": "/pricing.html"
     },
     {
+      "source": "/chat",
+      "destination": "/chat.html"
+    },
+    {
       "source": "/js/(.*)",
       "destination": "/js/$1"
+    },
+    {
+      "source": "/css/(.*)",
+      "destination": "/css/$1"
     }
   ]
 }

@@ -11,7 +11,7 @@ class AuthManager {
 
   async checkAuthStatus() {
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch('/api/auth?action=me', {
         credentials: 'include'
       });
       
@@ -34,7 +34,7 @@ class AuthManager {
 
   async login(email, password) {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth?action=login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +60,7 @@ class AuthManager {
 
   async register(email, password) {
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth?action=register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ class AuthManager {
 
   async logout() {
     try {
-      await fetch('/api/auth/logout', {
+      await fetch('/api/auth?action=logout', {
         method: 'POST',
         credentials: 'include'
       });
