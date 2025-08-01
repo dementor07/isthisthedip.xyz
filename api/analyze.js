@@ -128,7 +128,8 @@ async function performRealAnalysis(crypto, user, options = {}) {
       const newsData = news.status === 'fulfilled' ? news.value : [];
 
       // Calculate analysis scores
-      const technicalScore = analyzeTechnicals(techData, price);
+      const technicalResult = analyzeTechnicals(techData, price);
+      const technicalScore = technicalResult.score;
       const sentimentScore = await analyzeNewsSentiment(newsData);
       const marketScore = analyzeMarketConditions(price, fearGreedData);
       const volumeScore = analyzeVolumeProfile(price);
@@ -389,68 +390,214 @@ async function analyzeNewsSentiment(articles) {
     if (!articles.length) return 50;
     
     try {
-      if (!process.env.HUGGING_FACE_API_TOKEN) return 50;
-      
-      const headlines = articles.slice(0, 5).map(a => a.title).join('. ');
-      const response = await fetch('https://api-inference.huggingface.co/models/ProsusAI/finbert', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.HUGGING_FACE_API_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ inputs: headlines })
-      });
-      
-      const result = await response.json();
-      if (result[0]) {
-        const sentiment = result[0].find(s => s.label === 'positive')?.score || 0.5;
-        return Math.round(sentiment * 100);
-      }
+        if (!process.env.HUGGING_FACE_API_TOKEN) {
+            console.warn('Hugging Face API token not configured, using fallback sentiment analysis');
+            return analyzeSentimentFallback(articles);
+        }
+        
+        const headlines = articles.slice(0, 5).map(a => a.title).join('. ');
+        const response = await fetch('https://api-inference.huggingface.co/models/ProsusAI/finbert', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.HUGGING_FACE_API_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ inputs: headlines })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        
+        // Parse FinBERT sentiment response
+        let sentimentScore = 50; // Default neutral
+        
+        if (Array.isArray(result) && result.length > 0 && Array.isArray(result[0])) {
+            const sentiments = result[0];
+            
+            // FinBERT returns: [{"label": "positive", "score": 0.93}, {"label": "neutral", "score": 0.04}, {"label": "negative", "score": 0.02}]
+            const positive = sentiments.find(s => s.label === 'positive');
+            const negative = sentiments.find(s => s.label === 'negative');
+            const neutral = sentiments.find(s => s.label === 'neutral');
+            
+            if (positive && negative && neutral) {
+                // Calculate weighted sentiment score (0-100 scale)
+                // Positive contributes positively, negative contributes negatively, neutral is baseline
+                const weightedScore = (positive.score * 100) - (negative.score * 50) + (neutral.score * 50);
+                sentimentScore = Math.round(Math.max(10, Math.min(90, weightedScore)));
+            } else if (positive) {
+                sentimentScore = Math.round(positive.score * 100);
+            }
+        }
+        
+        console.log(`📊 FinBERT sentiment analysis: ${sentimentScore}/100`);
+        return sentimentScore;
+        
     } catch (error) {
-      console.error('Sentiment analysis failed:', error);
+        console.error('Hugging Face sentiment analysis failed:', error);
+        return analyzeSentimentFallback(articles);
     }
+}
+
+// Fallback sentiment analysis using keyword matching and basic NLP
+function analyzeSentimentFallback(articles) {
+    if (!articles.length) return 50;
     
-    return 50;
+    console.log('🔄 Using fallback sentiment analysis (keyword-based)');
+    
+    const positiveWords = [
+        'surge', 'bull', 'bullish', 'rise', 'gain', 'up', 'high', 'profit', 'growth', 
+        'adoption', 'breakthrough', 'moon', 'pump', 'rally', 'soar', 'climb', 'boom',
+        'optimistic', 'positive', 'strong', 'robust', 'healthy', 'promising', 'upgrade'
+    ];
+    
+    const negativeWords = [
+        'crash', 'bear', 'bearish', 'fall', 'loss', 'down', 'low', 'sell', 'decline', 
+        'dump', 'drop', 'plunge', 'regulation', 'ban', 'fear', 'panic', 'concern',
+        'weak', 'negative', 'risk', 'uncertain', 'volatile', 'correction', 'hack'
+    ];
+    
+    let positiveScore = 0;
+    let negativeScore = 0;
+    let totalArticles = 0;
+    
+    articles.slice(0, 10).forEach(article => {
+        const text = (article.title + ' ' + (article.description || '')).toLowerCase();
+        let articlePositive = 0;
+        let articleNegative = 0;
+        
+        positiveWords.forEach(word => {
+            const matches = (text.match(new RegExp('\\b' + word + '\\b', 'g')) || []).length;
+            articlePositive += matches;
+        });
+        
+        negativeWords.forEach(word => {
+            const matches = (text.match(new RegExp('\\b' + word + '\\b', 'g')) || []).length;
+            articleNegative += matches;
+        });
+        
+        if (articlePositive > 0 || articleNegative > 0) {
+            positiveScore += articlePositive;
+            negativeScore += articleNegative;
+            totalArticles++;
+        }
+    });
+    
+    if (totalArticles === 0) return 50; // Neutral if no sentiment indicators
+    
+    const totalSentiment = positiveScore + negativeScore;
+    if (totalSentiment === 0) return 50;
+    
+    const sentimentRatio = positiveScore / totalSentiment;
+    const sentimentScore = Math.round(30 + (sentimentRatio * 40)); // Scale to 30-70 range
+    
+    console.log(`📊 Fallback sentiment: ${sentimentScore}/100 (P:${positiveScore}, N:${negativeScore}, Articles:${totalArticles})`);
+    return Math.max(20, Math.min(80, sentimentScore)); // Clamp to reasonable range
 }
 
 function analyzeTechnicals(techData, priceData) {
     let score = 50;
+    let technicalDetails = {
+        rsi: null,
+        rsi_analysis: 'No RSI data available',
+        price_analysis: {},
+        volume_analysis: {},
+        trend_analysis: {}
+    };
     
     // RSI analysis using sparkline data (demo-friendly)
-    if (priceData.sparkline_7d && priceData.sparkline_7d.length > 14) {
+    if (priceData.sparkline_7d && Array.isArray(priceData.sparkline_7d) && priceData.sparkline_7d.length > 14) {
         const rsi = calculateRSIFromHistory(priceData.sparkline_7d);
-        if (rsi < 30) score += 20; // Oversold - buy signal
-        else if (rsi < 40) score += 10; // Approaching oversold
-        else if (rsi > 70) score -= 15; // Overbought
-        else if (rsi > 60) score -= 8; // Approaching overbought
+        technicalDetails.rsi = rsi;
+        
+        if (rsi < 30) {
+            score += 20; // Oversold - buy signal
+            technicalDetails.rsi_analysis = `RSI ${rsi}: Oversold - Strong buy signal`;
+        } else if (rsi < 40) {
+            score += 10; // Approaching oversold
+            technicalDetails.rsi_analysis = `RSI ${rsi}: Approaching oversold - Buy signal`;
+        } else if (rsi > 70) {
+            score -= 15; // Overbought
+            technicalDetails.rsi_analysis = `RSI ${rsi}: Overbought - Caution advised`;
+        } else if (rsi > 60) {
+            score -= 8; // Approaching overbought
+            technicalDetails.rsi_analysis = `RSI ${rsi}: Approaching overbought - Mild caution`;
+        } else {
+            technicalDetails.rsi_analysis = `RSI ${rsi}: Neutral range`;
+        }
+    } else {
+        console.warn('Sparkline data not available for RSI calculation');
+        technicalDetails.rsi_analysis = 'RSI calculation unavailable - no price history data';
     }
     
     // Multiple timeframe price change analysis
     const changes = {
-        '24h': priceData.price_change_percentage_24h,
-        '7d': priceData.price_change_percentage_7d,
-        '30d': priceData.price_change_percentage_30d
+        '24h': parseFloat(priceData.price_change_percentage_24h) || 0,
+        '7d': parseFloat(priceData.price_change_percentage_7d) || 0,
+        '30d': parseFloat(priceData.price_change_percentage_30d) || 0
+    };
+    
+    technicalDetails.price_analysis = {
+        change_24h: changes['24h'],
+        change_7d: changes['7d'],
+        change_30d: changes['30d'],
+        analysis: []
     };
     
     // 24h analysis
-    if (changes['24h']) {
-        if (changes['24h'] < -15) score += 20; // Major dip
-        else if (changes['24h'] < -10) score += 15; // Big dip
-        else if (changes['24h'] < -5) score += 10; // Medium dip
-        else if (changes['24h'] > 10) score -= 15; // Major pump
-        else if (changes['24h'] > 5) score -= 10; // Rising fast
+    if (changes['24h'] !== 0) {
+        if (changes['24h'] < -15) {
+            score += 20; // Major dip
+            technicalDetails.price_analysis.analysis.push(`24h: ${changes['24h'].toFixed(2)}% - Major dip detected`);
+        } else if (changes['24h'] < -10) {
+            score += 15; // Big dip
+            technicalDetails.price_analysis.analysis.push(`24h: ${changes['24h'].toFixed(2)}% - Significant dip`);
+        } else if (changes['24h'] < -5) {
+            score += 10; // Medium dip
+            technicalDetails.price_analysis.analysis.push(`24h: ${changes['24h'].toFixed(2)}% - Medium dip`);
+        } else if (changes['24h'] > 10) {
+            score -= 15; // Major pump
+            technicalDetails.price_analysis.analysis.push(`24h: ${changes['24h'].toFixed(2)}% - Major pump - caution`);
+        } else if (changes['24h'] > 5) {
+            score -= 10; // Rising fast
+            technicalDetails.price_analysis.analysis.push(`24h: ${changes['24h'].toFixed(2)}% - Rising fast`);
+        } else {
+            technicalDetails.price_analysis.analysis.push(`24h: ${changes['24h'].toFixed(2)}% - Neutral movement`);
+        }
+    } else {
+        technicalDetails.price_analysis.analysis.push('24h: No price change data available');
     }
     
     // 7d trend analysis
-    if (changes['7d']) {
-        if (changes['7d'] < -20) score += 12; // Weekly downtrend - opportunity
-        else if (changes['7d'] > 20) score -= 8; // Weekly uptrend - caution
+    if (changes['7d'] !== 0) {
+        if (changes['7d'] < -20) {
+            score += 12; // Weekly downtrend - opportunity
+            technicalDetails.price_analysis.analysis.push(`7d: ${changes['7d'].toFixed(2)}% - Weekly downtrend opportunity`);
+        } else if (changes['7d'] > 20) {
+            score -= 8; // Weekly uptrend - caution
+            technicalDetails.price_analysis.analysis.push(`7d: ${changes['7d'].toFixed(2)}% - Weekly uptrend - caution`);
+        } else {
+            technicalDetails.price_analysis.analysis.push(`7d: ${changes['7d'].toFixed(2)}% - Neutral weekly trend`);
+        }
     }
     
     // 30d trend for context
-    if (changes['30d']) {
-        if (changes['30d'] < -30) score += 8; // Monthly downtrend
-        else if (changes['30d'] > 30) score -= 5; // Monthly uptrend
+    if (changes['30d'] !== 0) {
+        if (changes['30d'] < -30) {
+            score += 8; // Monthly downtrend
+            technicalDetails.price_analysis.analysis.push(`30d: ${changes['30d'].toFixed(2)}% - Monthly downtrend`);
+        } else if (changes['30d'] > 30) {
+            score -= 5; // Monthly uptrend
+            technicalDetails.price_analysis.analysis.push(`30d: ${changes['30d'].toFixed(2)}% - Monthly uptrend`);
+        } else {
+            technicalDetails.price_analysis.analysis.push(`30d: ${changes['30d'].toFixed(2)}% - Neutral monthly trend`);
+        }
     }
     
     // Support/Resistance analysis using ATH/ATL
@@ -480,11 +627,29 @@ function analyzeTechnicals(techData, priceData) {
     // Moving average analysis using sparkline data
     if (priceData.sparkline_7d && priceData.sparkline_7d.length > 0) {
         const ma = calculateMovingAverageFromSparkline(priceData.sparkline_7d);
-        if (currentPrice < ma * 0.95) score += 8; // Below MA - potential buy
-        else if (currentPrice > ma * 1.05) score -= 6; // Above MA - caution
+        technicalDetails.trend_analysis.moving_average = ma;
+        
+        if (currentPrice < ma * 0.95) {
+            score += 8; // Below MA - potential buy
+            technicalDetails.trend_analysis.ma_signal = 'Below MA - potential buy opportunity';
+        } else if (currentPrice > ma * 1.05) {
+            score -= 6; // Above MA - caution
+            technicalDetails.trend_analysis.ma_signal = 'Above MA - exercise caution';
+        } else {
+            technicalDetails.trend_analysis.ma_signal = 'Near MA - neutral';
+        }
+    } else {
+        technicalDetails.trend_analysis.ma_signal = 'Moving average calculation unavailable';
     }
     
-    return Math.max(0, Math.min(100, score));
+    // Add technical details to the score
+    technicalDetails.final_score = Math.max(0, Math.min(100, score));
+    
+    // Return enhanced technical analysis
+    return {
+        score: technicalDetails.final_score,
+        details: technicalDetails
+    };
 }
 
 function analyzeMarketConditions(priceData, fearGreedData) {
