@@ -129,14 +129,18 @@
 
             async checkAuth() {
                 try {
-                    const response = await fetch('/api/auth/me', {
+                    const response = await fetch('/api/auth?action=me', {
                         credentials: 'include'
                     });
                     
                     if (response.ok) {
-                        this.currentUser = await response.json();
+                        const data = await response.json();
+                        // Handle both direct user object and wrapped response
+                        this.currentUser = data.user || data;
+                        console.log('Auth check successful:', this.currentUser);
                         this.updateUI();
                     } else {
+                        console.log('Auth check failed with status:', response.status);
                         this.currentUser = null;
                         this.updateUI();
                     }

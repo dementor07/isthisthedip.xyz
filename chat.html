@@ -134,9 +134,13 @@
                     });
                     
                     if (response.ok) {
-                        this.currentUser = await response.json();
+                        const data = await response.json();
+                        // Handle both direct user object and wrapped response
+                        this.currentUser = data.user || data;
+                        console.log('Auth check successful:', this.currentUser);
                         this.updateUI();
                     } else {
+                        console.log('Auth check failed with status:', response.status);
                         this.currentUser = null;
                         this.updateUI();
                     }
@@ -163,13 +167,15 @@
                     loginRequired.classList.add('hidden');
                     messageForm.classList.remove('hidden');
 
-                    userName.textContent = this.currentUser.email.split('@')[0];
+                    userName.textContent = this.currentUser.email ? this.currentUser.email.split('@')[0] : 'User';
                     
-                    // Set tier badge
-                    const tier = this.currentUser.subscription_tier;
-                    const isAdmin = this.currentUser.is_admin;
+                    // Set tier badge - handle different property names
+                    const tier = this.currentUser.tier || this.currentUser.subscription_tier || 'free';
+                    const isAdmin = this.currentUser.email && this.currentUser.email.includes('admin');
                     
-                    if (isAdmin) {
+                    console.log('User tier:', tier, 'Is admin:', isAdmin);
+                    
+                    if (isAdmin || tier === 'admin') {
                         userTier.textContent = 'ADMIN';
                         userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white admin-badge';
                     } else if (tier === 'pro') {
