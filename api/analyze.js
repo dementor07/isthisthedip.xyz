@@ -121,15 +121,26 @@ async function performRealAnalysis(crypto, user) {
       const signal = finalScore >= 70 ? 'BUY' : finalScore >= 40 ? 'MAYBE' : 'WAIT';
       const confidence = calculateConfidence(finalScore, [priceData, fearGreed, technicals, news]);
 
-      return {
+      // Enhanced result with CoinGecko data
+      const currentPrice = price.usd || price.current_price || 0;
+      const result = {
         crypto: {
           name: price.name || crypto,
           symbol: price.symbol || crypto.toUpperCase(),
-          price: price.current_price || 0,
-          change_24h: price.price_change_percentage_24h || 0
+          price: currentPrice,
+          change_24h: price.price_change_percentage_24h || 0,
+          change_7d: price.market_data?.price_change_percentage_7d || 0,
+          change_30d: price.market_data?.price_change_percentage_30d || 0,
+          market_cap: price.usd_market_cap || price.market_cap || 0,
+          volume_24h: price.usd_24h_vol || price.total_volume || 0,
+          market_cap_rank: price.market_cap_rank || 0,
+          ath: price.market_data?.ath || 0,
+          ath_change_percentage: price.market_data?.ath_change_percentage || 0,
+          atl: price.market_data?.atl || 0,
+          atl_change_percentage: price.market_data?.atl_change_percentage || 0
         },
         score: finalScore,
-        signal: signal,
+        signal: signal,  
         confidence: confidence,
         details: {
           technical_score: technicalScore,
@@ -137,10 +148,44 @@ async function performRealAnalysis(crypto, user) {
           market_score: marketScore,
           volume_score: volumeScore,
           fear_greed: fearGreedData.value,
-          data_sources: getDataSourcesUsed([priceData, fearGreed, technicals, news])
+          data_sources: getDataSourcesUsed([priceData, fearGreed, technicals, news]),
+          data_quality: price.data_quality || 'Good'
         },
+        insights: generateInsights(price, finalScore, technicalScore, marketScore),
+        risk_factors: identifyRiskFactors(price),
+        opportunity_factors: identifyOpportunityFactors(price, finalScore),
         timestamp: new Date().toISOString()
       };
+
+      // Add volatility analysis if historical data is available
+      if (price.historical_data && price.historical_data.prices) {
+        result.volatility = {
+          annualized_volatility: calculateVolatility(price.historical_data.prices),
+          price_stability: analyzePriceStability(price.historical_data.prices)
+        };
+      }
+
+      // Add community metrics if available
+      if (price.community_data) {
+        result.community = {
+          twitter_followers: price.community_data.twitter_followers || 0,
+          reddit_subscribers: price.community_data.reddit_subscribers || 0,
+          social_activity_score: calculateSocialActivityScore(price.community_data)
+        };
+      }
+
+      // Add quality metrics from CoinGecko
+      if (price.coingecko_score) {
+        result.quality_metrics = {
+          coingecko_score: price.coingecko_score,
+          developer_score: price.developer_score || 0,
+          community_score: price.community_score || 0,
+          liquidity_score: price.liquidity_score || 0,
+          public_interest_score: price.public_interest_score || 0
+        };
+      }
+
+      return result;
     } catch (error) {
       console.error('Real analysis failed:', error);
       return getFallbackAnalysis(crypto);
@@ -148,6 +193,95 @@ async function performRealAnalysis(crypto, user) {
 }
 
 async function getCoinGeckoData(crypto) {
+    try {
+        // First, try to get comprehensive data including market data
+        const [priceData, coinData, historyData] = await Promise.allSettled([
+            getCoinGeckoPriceData(crypto),
+            getCoinGeckoDetailedData(crypto),
+            getCoinGeckoHistoricalData(crypto)
+        ]);
+
+        const price = priceData.status === 'fulfilled' ? priceData.value : null;
+        const details = coinData.status === 'fulfilled' ? coinData.value : null;
+        const history = historyData.status === 'fulfilled' ? historyData.value : null;
+
+        // Merge all available data
+        return {
+            ...price,
+            ...details,
+            historical_data: history,
+            data_quality: calculateDataQuality([priceData, coinData, historyData])
+        };
+    } catch (error) {
+        console.error('CoinGecko comprehensive data error:', error);
+        // Fallback to simple price data
+        return await getCoinGeckoSimplePrice(crypto);
+    }
+}
+
+async function getCoinGeckoPriceData(crypto) {
+    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${crypto}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true&include_last_updated_at=true`);
+    const data = await response.json();
+    return data[crypto] || data[Object.keys(data)[0]];
+}
+
+async function getCoinGeckoDetailedData(crypto) {
+    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${crypto}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false&sparkline=true`);
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    return {
+        name: data.name,
+        symbol: data.symbol?.toUpperCase(),
+        description: data.description?.en?.substring(0, 200),
+        categories: data.categories || [],
+        market_cap_rank: data.market_cap_rank,
+        coingecko_rank: data.coingecko_rank,
+        coingecko_score: data.coingecko_score,
+        developer_score: data.developer_score,
+        community_score: data.community_score,
+        liquidity_score: data.liquidity_score,
+        public_interest_score: data.public_interest_score,
+        market_data: {
+            ath: data.market_data?.ath?.usd,
+            ath_change_percentage: data.market_data?.ath_change_percentage?.usd,
+            atl: data.market_data?.atl?.usd,
+            atl_change_percentage: data.market_data?.atl_change_percentage?.usd,
+            price_change_percentage_7d: data.market_data?.price_change_percentage_7d,
+            price_change_percentage_30d: data.market_data?.price_change_percentage_30d,
+            price_change_percentage_1y: data.market_data?.price_change_percentage_1y,
+            high_24h: data.market_data?.high_24h?.usd,
+            low_24h: data.market_data?.low_24h?.usd,
+            circulating_supply: data.market_data?.circulating_supply,
+            total_supply: data.market_data?.total_supply,
+            max_supply: data.market_data?.max_supply
+        },
+        community_data: {
+            twitter_followers: data.community_data?.twitter_followers,
+            reddit_subscribers: data.community_data?.reddit_subscribers,
+            reddit_average_posts_48h: data.community_data?.reddit_average_posts_48h,
+            reddit_average_comments_48h: data.community_data?.reddit_average_comments_48h,
+            facebook_likes: data.community_data?.facebook_likes,
+            telegram_channel_user_count: data.community_data?.telegram_channel_user_count
+        },
+        sparkline_7d: data.market_data?.sparkline_7d?.price || []
+    };
+}
+
+async function getCoinGeckoHistoricalData(crypto) {
+    // Get 30 days of historical data for better technical analysis
+    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${crypto}/market_chart?vs_currency=usd&days=30&interval=daily`);
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    return {
+        prices: data.prices || [],
+        market_caps: data.market_caps || [],
+        total_volumes: data.total_volumes || []
+    };
+}
+
+async function getCoinGeckoSimplePrice(crypto) {
     const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${crypto}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`);
     const data = await response.json();
     return data[crypto] || data[Object.keys(data)[0]];
@@ -206,25 +340,72 @@ async function analyzeNewsSentiment(articles) {
 function analyzeTechnicals(techData, priceData) {
     let score = 50;
     
-    // RSI analysis
-    if (techData['Technical Analysis']) {
-      const rsi = parseFloat(techData['Technical Analysis']['RSI']) || 50;
-      if (rsi < 30) score += 20; // Oversold - good buy signal
-      else if (rsi > 70) score -= 15; // Overbought
+    // Enhanced RSI analysis using historical data
+    if (priceData.historical_data && priceData.historical_data.prices) {
+        const rsi = calculateRSIFromHistory(priceData.historical_data.prices);
+        if (rsi < 30) score += 25; // Oversold - strong buy signal
+        else if (rsi < 40) score += 15; // Approaching oversold
+        else if (rsi > 70) score -= 20; // Overbought
+        else if (rsi > 60) score -= 10; // Approaching overbought
     }
     
-    // Price change analysis
-    if (priceData.price_change_percentage_24h) {
-      const change = priceData.price_change_percentage_24h;
-      if (change < -10) score += 15; // Big dip
-      else if (change < -5) score += 10; // Medium dip
-      else if (change > 5) score -= 10; // Rising fast
+    // Multiple timeframe price change analysis
+    const changes = {
+        '24h': priceData.price_change_percentage_24h,
+        '7d': priceData.market_data?.price_change_percentage_7d,
+        '30d': priceData.market_data?.price_change_percentage_30d
+    };
+    
+    // 24h analysis
+    if (changes['24h']) {
+        if (changes['24h'] < -15) score += 20; // Major dip
+        else if (changes['24h'] < -10) score += 15; // Big dip
+        else if (changes['24h'] < -5) score += 10; // Medium dip
+        else if (changes['24h'] > 10) score -= 15; // Major pump
+        else if (changes['24h'] > 5) score -= 10; // Rising fast
     }
     
-    // Volume analysis
-    if (priceData.total_volume && priceData.market_cap) {
-      const volumeRatio = priceData.total_volume / priceData.market_cap;
-      if (volumeRatio > 0.1) score += 10; // High volume
+    // 7d trend analysis
+    if (changes['7d']) {
+        if (changes['7d'] < -20) score += 15; // Weekly downtrend - opportunity
+        else if (changes['7d'] > 20) score -= 10; // Weekly uptrend - caution
+    }
+    
+    // Support/Resistance analysis using ATH/ATL
+    if (priceData.market_data) {
+        const currentPrice = priceData.usd || priceData.current_price || 0;
+        const ath = priceData.market_data.ath;
+        const atl = priceData.market_data.atl;
+        
+        if (ath && atl && currentPrice) {
+            const athDistance = ((currentPrice - ath) / ath) * 100;
+            const atlDistance = ((currentPrice - atl) / atl) * 100;
+            
+            // Near ATL is good buying opportunity
+            if (athDistance < -80) score += 20; // Very close to ATL
+            else if (athDistance < -60) score += 15; // Close to ATL
+            
+            // Near ATH is risky
+            if (athDistance > -10) score -= 15; // Very close to ATH
+            else if (athDistance > -25) score -= 10; // Approaching ATH
+        }
+    }
+    
+    // Volume analysis with historical context
+    if (priceData.usd_24h_vol && priceData.usd_market_cap) {
+        const volumeRatio = priceData.usd_24h_vol / priceData.usd_market_cap;
+        if (volumeRatio > 0.15) score += 15; // Very high volume
+        else if (volumeRatio > 0.1) score += 10; // High volume
+        else if (volumeRatio < 0.01) score -= 10; // Low volume
+    }
+    
+    // Moving average analysis using sparkline data
+    if (priceData.sparkline_7d && priceData.sparkline_7d.length > 0) {
+        const ma = calculateMovingAverageFromSparkline(priceData.sparkline_7d);
+        const currentPrice = priceData.usd || priceData.current_price || 0;
+        
+        if (currentPrice < ma * 0.95) score += 10; // Below MA - potential buy
+        else if (currentPrice > ma * 1.05) score -= 8; // Above MA - caution
     }
     
     return Math.max(0, Math.min(100, score));
@@ -235,14 +416,74 @@ function analyzeMarketConditions(priceData, fearGreedData) {
     
     // Fear & Greed analysis
     const fearGreed = fearGreedData.value;
-    if (fearGreed < 25) score += 25; // Extreme fear - good buy
-    else if (fearGreed < 45) score += 15; // Fear
-    else if (fearGreed > 75) score -= 20; // Greed
+    if (fearGreed < 25) score += 25; // Extreme fear - excellent buy opportunity
+    else if (fearGreed < 45) score += 15; // Fear - good buy opportunity
+    else if (fearGreed > 75) score -= 20; // Greed - be cautious
+    else if (fearGreed > 60) score -= 10; // Mild greed
 
-    // Market cap analysis
-    if (priceData.market_cap) {
-      // Prefer established projects during dips
-      if (priceData.market_cap > 1e9) score += 10;
+    // Market cap and rank analysis
+    const marketCap = priceData.usd_market_cap || priceData.market_cap;
+    const rank = priceData.market_cap_rank;
+    
+    if (marketCap) {
+        // Large cap (>$10B) - more stable during dips
+        if (marketCap > 10e9) score += 15;
+        // Mid cap ($1B-$10B) - good balance
+        else if (marketCap > 1e9) score += 10;
+        // Small cap ($100M-$1B) - higher risk but potential
+        else if (marketCap > 100e6) score += 5;
+        // Micro cap (<$100M) - very risky
+        else score -= 10;
+    }
+    
+    if (rank) {
+        // Top 10 cryptos - most stable
+        if (rank <= 10) score += 12;
+        // Top 50 - established projects
+        else if (rank <= 50) score += 8;
+        // Top 100 - decent projects
+        else if (rank <= 100) score += 5;
+        // Beyond top 100 - higher risk
+        else if (rank > 200) score -= 5;
+    }
+
+    // CoinGecko scoring system analysis
+    if (priceData.coingecko_score) {
+        const cgScore = priceData.coingecko_score;
+        if (cgScore > 70) score += 10; // High quality project
+        else if (cgScore > 50) score += 5; // Decent project
+        else if (cgScore < 30) score -= 10; // Low quality
+    }
+
+    // Community strength analysis
+    if (priceData.community_data) {
+        const community = priceData.community_data;
+        let communityScore = 0;
+        
+        // Social media following
+        if (community.twitter_followers > 1000000) communityScore += 5;
+        else if (community.twitter_followers > 100000) communityScore += 3;
+        
+        if (community.reddit_subscribers > 100000) communityScore += 5;
+        else if (community.reddit_subscribers > 10000) communityScore += 3;
+        
+        // Community activity
+        if (community.reddit_average_posts_48h > 10) communityScore += 3;
+        if (community.reddit_average_comments_48h > 50) communityScore += 3;
+        
+        score += Math.min(communityScore, 15); // Cap community bonus
+    }
+
+    // Supply analysis
+    if (priceData.market_data) {
+        const { circulating_supply, total_supply, max_supply } = priceData.market_data;
+        
+        if (max_supply && circulating_supply) {
+            const supplyRatio = circulating_supply / max_supply;
+            // Lower circulating supply ratio can be positive (scarcity)
+            if (supplyRatio < 0.5) score += 5;
+            else if (supplyRatio > 0.95) score += 3; // Nearly fully diluted
+        }
     }
     
     return Math.max(0, Math.min(100, score));
@@ -251,13 +492,44 @@ function analyzeMarketConditions(priceData, fearGreedData) {
 function analyzeVolumeProfile(priceData) {
     let score = 50;
     
-    if (priceData.total_volume && priceData.market_cap) {
-      const volumeRatio = priceData.total_volume / priceData.market_cap;
-      
-      // High volume during dips is positive
-      if (volumeRatio > 0.2) score += 20;
-      else if (volumeRatio > 0.1) score += 10;
-      else if (volumeRatio < 0.01) score -= 15; // Low volume
+    const volume24h = priceData.usd_24h_vol || priceData.total_volume;
+    const marketCap = priceData.usd_market_cap || priceData.market_cap;
+    
+    if (volume24h && marketCap) {
+        const volumeRatio = volume24h / marketCap;
+        
+        // Volume ratio analysis
+        if (volumeRatio > 0.25) score += 25; // Extremely high volume
+        else if (volumeRatio > 0.15) score += 20; // Very high volume
+        else if (volumeRatio > 0.1) score += 15; // High volume
+        else if (volumeRatio > 0.05) score += 10; // Good volume
+        else if (volumeRatio < 0.01) score -= 15; // Low volume - concerning
+        else if (volumeRatio < 0.005) score -= 25; // Very low volume - very concerning
+    }
+    
+    // Historical volume analysis using volume data
+    if (priceData.historical_data && priceData.historical_data.total_volumes) {
+        const volumes = priceData.historical_data.total_volumes;
+        const currentVolume = volume24h;
+        
+        if (volumes.length > 7 && currentVolume) {
+            const recentVolumes = volumes.slice(-7).map(v => Array.isArray(v) ? v[1] : v);
+            const avgVolume = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
+            
+            // Current volume vs recent average
+            const volumeChange = (currentVolume - avgVolume) / avgVolume;
+            
+            if (volumeChange > 1.0) score += 15; // Volume doubled - high interest
+            else if (volumeChange > 0.5) score += 10; // Volume increased 50%
+            else if (volumeChange < -0.5) score -= 10; // Volume dropped significantly
+        }
+    }
+    
+    // Liquidity analysis based on market cap and volume
+    if (marketCap) {
+        if (marketCap > 1e9 && volume24h > 50e6) score += 10; // Good liquidity
+        else if (marketCap < 100e6 && volume24h > 1e6) score += 5; // Decent for small cap
+        else if (marketCap > 1e9 && volume24h < 10e6) score -= 10; // Poor liquidity for large cap
     }
     
     return Math.max(0, Math.min(100, score));
@@ -302,4 +574,222 @@ function getFallbackAnalysis(crypto) {
       confidence: 'Low',
       timestamp: new Date().toISOString()
     };
+}
+
+// Enhanced helper functions for CoinGecko data analysis
+function calculateDataQuality(dataResults) {
+    const successful = dataResults.filter(r => r.status === 'fulfilled').length;
+    const total = dataResults.length;
+    const percentage = (successful / total) * 100;
+    
+    if (percentage >= 100) return 'Excellent';
+    if (percentage >= 66) return 'Good'; 
+    if (percentage >= 33) return 'Fair';
+    return 'Poor';
+}
+
+function calculateRSIFromHistory(prices) {
+    if (!prices || prices.length < 14) return 50; // Default neutral RSI
+    
+    const priceArray = prices.map(p => Array.isArray(p) ? p[1] : p);
+    const changes = [];
+    
+    for (let i = 1; i < priceArray.length; i++) {
+        changes.push(priceArray[i] - priceArray[i - 1]);
+    }
+    
+    const gains = changes.map(change => change > 0 ? change : 0);
+    const losses = changes.map(change => change < 0 ? Math.abs(change) : 0);
+    
+    const avgGain = gains.slice(-14).reduce((a, b) => a + b, 0) / 14;
+    const avgLoss = losses.slice(-14).reduce((a, b) => a + b, 0) / 14;
+    
+    if (avgLoss === 0) return 100;
+    
+    const rs = avgGain / avgLoss;
+    const rsi = 100 - (100 / (1 + rs));
+    
+    return Math.round(rsi);
+}
+
+function calculateMovingAverageFromSparkline(sparkline) {
+    if (!sparkline || sparkline.length === 0) return 0;
+    
+    const sum = sparkline.reduce((a, b) => a + b, 0);
+    return sum / sparkline.length;
+}
+
+function calculateVolatility(prices) {
+    if (!prices || prices.length < 2) return 0;
+    
+    const priceArray = prices.map(p => Array.isArray(p) ? p[1] : p);
+    const returns = [];
+    
+    for (let i = 1; i < priceArray.length; i++) {
+        const returnValue = (priceArray[i] - priceArray[i - 1]) / priceArray[i - 1];
+        returns.push(returnValue);
+    }
+    
+    const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+    
+    return Math.sqrt(variance) * Math.sqrt(365) * 100; // Annualized volatility percentage
+}
+
+function analyzePriceStability(prices) {
+    const volatility = calculateVolatility(prices);
+    
+    if (volatility < 30) return 'Very Stable';
+    if (volatility < 60) return 'Stable'; 
+    if (volatility < 100) return 'Moderate';
+    if (volatility < 150) return 'Volatile';
+    return 'Highly Volatile';
+}
+
+function calculateSocialActivityScore(communityData) {
+    let score = 0;
+    
+    // Twitter influence
+    if (communityData.twitter_followers > 1000000) score += 30;
+    else if (communityData.twitter_followers > 100000) score += 20;
+    else if (communityData.twitter_followers > 10000) score += 10;
+    
+    // Reddit engagement
+    if (communityData.reddit_subscribers > 100000) score += 25;
+    else if (communityData.reddit_subscribers > 10000) score += 15;
+    else if (communityData.reddit_subscribers > 1000) score += 5;
+    
+    // Activity level
+    const posts = communityData.reddit_average_posts_48h || 0;
+    const comments = communityData.reddit_average_comments_48h || 0;
+    
+    if (posts > 20) score += 15;
+    else if (posts > 10) score += 10;
+    else if (posts > 5) score += 5;
+    
+    if (comments > 100) score += 15;
+    else if (comments > 50) score += 10;
+    else if (comments > 20) score += 5;
+    
+    // Other platforms
+    if (communityData.telegram_channel_user_count > 50000) score += 10;
+    if (communityData.facebook_likes > 100000) score += 5;
+    
+    return Math.min(score, 100);
+}
+
+function generateInsights(priceData, finalScore, technicalScore, marketScore) {
+    const insights = [];
+    const currentPrice = priceData.usd || priceData.current_price || 0;
+    
+    // Price position insights
+    if (priceData.market_data) {
+        const athDistance = priceData.market_data.ath_change_percentage || 0;
+        const atlDistance = priceData.market_data.atl_change_percentage || 0;
+        
+        if (athDistance < -70) {
+            insights.push("Currently trading at significant discount from all-time high");
+        }
+        if (atlDistance > 500) {
+            insights.push("Strong recovery from all-time low shows resilience");
+        }
+    }
+    
+    // Technical insights
+    if (technicalScore > 70) {
+        insights.push("Strong technical indicators support buying opportunity");
+    } else if (technicalScore < 30) {
+        insights.push("Technical analysis suggests caution - wait for better entry");
+    }
+    
+    // Market position insights
+    if (priceData.market_cap_rank && priceData.market_cap_rank <= 50) {
+        insights.push("Established top-50 cryptocurrency with proven track record");
+    }
+    
+    // Volume insights  
+    const volume = priceData.usd_24h_vol || priceData.total_volume || 0;
+    const marketCap = priceData.usd_market_cap || priceData.market_cap || 0;
+    if (volume && marketCap && (volume / marketCap) > 0.15) {
+        insights.push("High trading volume indicates strong market interest");
+    }
+    
+    return insights;
+}
+
+function identifyRiskFactors(priceData) {
+    const riskFactors = [];
+    
+    // Market cap risk
+    const marketCap = priceData.usd_market_cap || priceData.market_cap || 0;
+    if (marketCap < 100e6) {
+        riskFactors.push("Small market cap increases volatility risk");
+    }
+    
+    // Volume risk
+    const volume = priceData.usd_24h_vol || priceData.total_volume || 0;
+    if (volume && marketCap && (volume / marketCap) < 0.01) {
+        riskFactors.push("Low trading volume may affect liquidity");
+    }
+    
+    // Price volatility
+    if (priceData.historical_data) {
+        const volatility = calculateVolatility(priceData.historical_data.prices);
+        if (volatility > 100) {
+            riskFactors.push("High price volatility increases investment risk");
+        }
+    }
+    
+    // Ranking risk
+    if (priceData.market_cap_rank && priceData.market_cap_rank > 200) {
+        riskFactors.push("Lower market ranking indicates higher speculative risk");
+    }
+    
+    // Quality score risk
+    if (priceData.coingecko_score && priceData.coingecko_score < 40) {
+        riskFactors.push("Low CoinGecko quality score suggests project concerns");
+    }
+    
+    return riskFactors;
+}
+
+function identifyOpportunityFactors(priceData, finalScore) {
+    const opportunities = [];
+    
+    // Score-based opportunities
+    if (finalScore > 80) {
+        opportunities.push("Exceptional buying opportunity identified");
+    } else if (finalScore > 70) {
+        opportunities.push("Strong buying signal with favorable conditions");
+    }
+    
+    // Price position opportunities
+    if (priceData.market_data) {
+        const athDistance = priceData.market_data.ath_change_percentage || 0;
+        if (athDistance < -80) {
+            opportunities.push("Trading near historic lows - potential for significant upside");
+        } else if (athDistance < -50) {
+            opportunities.push("Substantial discount from all-time high");
+        }
+    }
+    
+    // Quality opportunities
+    if (priceData.coingecko_score && priceData.coingecko_score > 70) {
+        opportunities.push("High-quality project with strong fundamentals");
+    }
+    
+    // Community opportunities
+    if (priceData.community_data) {
+        const socialScore = calculateSocialActivityScore(priceData.community_data);
+        if (socialScore > 70) {
+            opportunities.push("Strong community support and engagement");
+        }
+    }
+    
+    // Market position opportunities
+    if (priceData.market_cap_rank && priceData.market_cap_rank <= 20) {
+        opportunities.push("Top-tier cryptocurrency with institutional recognition");
+    }
+    
+    return opportunities;
 }
