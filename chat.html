@@ -320,20 +320,41 @@
                     if (response.ok) {
                         const data = await response.json();
                         const stats = data.stats || data;
-                        document.getElementById('total-messages').textContent = `${stats.totalMessages || 127} messages`;
-                        document.getElementById('active-users').textContent = `${stats.activeUsers || 23} users`;
+                        
+                        const totalMessagesEl = document.getElementById('total-messages');
+                        const activeUsersEl = document.getElementById('active-users');
+                        
+                        if (totalMessagesEl) {
+                            totalMessagesEl.textContent = `${stats.totalMessages || 127} messages`;
+                        }
+                        if (activeUsersEl) {
+                            activeUsersEl.textContent = `${stats.activeUsers || 23} users`;
+                        }
                     }
                 } catch (error) {
                     console.error('Load stats failed:', error);
-                    // Fallback stats
-                    document.getElementById('total-messages').textContent = `127 messages`;
-                    document.getElementById('active-users').textContent = `23 users`;
+                    // Fallback stats with null checks
+                    const totalMessagesEl = document.getElementById('total-messages');
+                    const activeUsersEl = document.getElementById('active-users');
+                    
+                    if (totalMessagesEl) {
+                        totalMessagesEl.textContent = `127 messages`;
+                    }
+                    if (activeUsersEl) {
+                        activeUsersEl.textContent = `23 users`;
+                    }
                 }
             }
 
             renderMessages() {
                 const container = document.getElementById('messages-container');
                 const noMessages = document.getElementById('no-messages');
+                
+                // Add null checks to prevent errors
+                if (!container || !noMessages) {
+                    console.error('Messages container or no-messages element not found');
+                    return;
+                }
                 
                 if (this.messages.length === 0) {
                     noMessages.classList.remove('hidden');
