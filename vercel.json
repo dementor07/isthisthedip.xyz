@@ -37,7 +37,7 @@
     },
     {
       "source": "/chat",
-      "destination": "/chat-new.html"
+      "destination": "/chat.html"
     },
     {
       "source": "/js/(.*)",

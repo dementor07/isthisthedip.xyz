@@ -22,6 +22,13 @@
         .premium-badge {
             background: linear-gradient(45deg, #4facfe, #00f2fe);
         }
+        .send-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        .send-btn:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -49,13 +56,22 @@
     </nav>
 
     <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Connection Status -->
+        <div id="connection-status" class="mb-4 p-3 rounded-lg hidden">
+            <div class="flex items-center">
+                <div id="status-indicator" class="w-2 h-2 rounded-full mr-2"></div>
+                <span id="status-text" class="text-sm font-medium"></span>
+            </div>
+        </div>
+
         <!-- Chat Stats -->
         <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div class="flex items-center justify-between">
                 <h2 class="text-lg font-semibold text-gray-900">Community Discussion</h2>
                 <div id="chat-stats" class="flex items-center space-x-4 text-sm text-gray-600">
-                    <span id="total-messages">0 messages</span>
-                    <span id="active-users">0 users</span>
+                    <span id="total-messages">Loading...</span>
+                    <span id="active-users">Loading...</span>
+                    <span id="online-now">Loading...</span>
                 </div>
             </div>
         </div>
@@ -63,7 +79,12 @@
         <!-- Chat Messages -->
         <div class="bg-white rounded-lg shadow-sm mb-6">
             <div class="p-6 border-b">
-                <h3 class="text-md font-medium text-gray-900">Messages</h3>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-md font-medium text-gray-900">Messages</h3>
+                    <button id="refresh-btn" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        Refresh
+                    </button>
+                </div>
             </div>
             <div id="messages-container" class="max-h-96 overflow-y-auto p-4 space-y-4">
                 <div id="loading-messages" class="text-center py-8">
@@ -73,12 +94,13 @@
                 <div id="no-messages" class="hidden text-center py-8 text-gray-500">
                     <p>No messages yet. Be the first to start the conversation!</p>
                 </div>
+                <div id="messages-list"></div>
             </div>
         </div>
 
         <!-- Message Input -->
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <div id="login-required" class="hidden text-center py-4">
+            <div id="login-required" class="text-center py-4">
                 <p class="text-gray-600 mb-4">Please login to participate in the chat</p>
                 <button onclick="window.location.href='/login'" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md">
                     Login to Chat
@@ -100,8 +122,7 @@
                             <div class="flex space-x-2">
                                 <button 
                                     id="send-btn" 
-                                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onclick="chatApp.sendMessage()"
+                                    class="send-btn bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                                     disabled
                                 >
                                     Send Message
@@ -109,7 +130,6 @@
                                 <button 
                                     id="clear-btn" 
                                     class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium"
-                                    onclick="chatApp.clearAllMessages()"
                                 >
                                     Clear All
                                 </button>
@@ -122,249 +142,198 @@
     </div>
 
     <script>
-        class ChatApp {
+        class IsThisTheDipChat {
             constructor() {
                 this.currentUser = null;
                 this.messages = [];
+                this.isInitialized = false;
+                this.pollingInterval = null;
+                this.baseApiUrl = '/api/chat';
+                
+                console.log('🚀 Initializing IsThisTheDipChat...');
                 this.init();
             }
 
             async init() {
-                await this.checkAuth();
-                await this.loadMessages();
-                await this.loadStats();
-                this.setupEventListeners();
-                this.startPolling();
-                
-                // Fallback: If user appears logged in but currentUser not set, try to show form
-                setTimeout(() => {
-                    this.ensureMessageFormVisible();
-                }, 1000);
+                try {
+                    this.showStatus('Connecting...', 'yellow');
+                    
+                    // Initialize authentication
+                    await this.checkAuthentication();
+                    
+                    // Load initial data
+                    await this.loadMessages();
+                    await this.loadStats();
+                    
+                    // Setup UI
+                    this.setupEventListeners();
+                    this.updateUI();
+                    
+                    // Start polling for updates
+                    this.startPolling();
+                    
+                    this.isInitialized = true;
+                    this.showStatus('Connected', 'green');
+                    
+                    console.log('✅ Chat initialized successfully');
+                } catch (error) {
+                    console.error('❌ Chat initialization failed:', error);
+                    this.showStatus('Connection failed', 'red');
+                }
             }
-            
-            ensureMessageFormVisible() {
-                // Check if user appears to be logged in based on page elements
-                const logoutBtn = document.getElementById('logout-btn');
-                const messageForm = document.getElementById('message-form');
+
+            showStatus(message, color) {
+                const statusDiv = document.getElementById('connection-status');
+                const indicator = document.getElementById('status-indicator');
+                const text = document.getElementById('status-text');
                 
-                if (logoutBtn && !logoutBtn.classList.contains('hidden') && 
-                    messageForm && messageForm.classList.contains('hidden')) {
+                if (statusDiv && indicator && text) {
+                    statusDiv.classList.remove('hidden');
+                    text.textContent = message;
                     
-                    console.log('User appears logged in but message form hidden, showing form...');
-                    messageForm.classList.remove('hidden');
+                    indicator.className = `w-2 h-2 rounded-full mr-2 bg-${color}-500`;
+                    statusDiv.className = `mb-4 p-3 rounded-lg bg-${color}-50 border border-${color}-200`;
                     
-                    // Re-setup event listeners after showing the form
-                    setTimeout(() => {
-                        console.log('Re-setting up event listeners after showing form...');
-                        this.setupEventListeners();
-                    }, 100);
-                    
-                    // Try to get user info from the page
-                    const userName = document.getElementById('user-name');
-                    if (userName && userName.textContent && !this.currentUser) {
-                        this.currentUser = {
-                            email: userName.textContent + '@example.com',
-                            tier: 'free'
-                        };
-                        console.log('Set fallback currentUser:', this.currentUser);
+                    // Hide after 3 seconds for success messages
+                    if (color === 'green') {
+                        setTimeout(() => {
+                            statusDiv.classList.add('hidden');
+                        }, 3000);
                     }
                 }
             }
 
-            async checkAuth() {
+            async checkAuthentication() {
                 try {
-                    console.log('Checking authentication...');
+                    console.log('🔐 Checking authentication...');
                     const response = await fetch('/api/auth?action=me', {
-                        credentials: 'include'
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
                     });
-                    
-                    console.log('Auth response status:', response.status);
                     
                     if (response.ok) {
                         const data = await response.json();
-                        console.log('Auth response data:', data);
-                        // Handle both direct user object and wrapped response
-                        this.currentUser = data.user || data;
-                        console.log('Auth check successful:', this.currentUser);
-                        this.updateUI();
+                        if (data.authenticated && data.user) {
+                            this.currentUser = data.user;
+                            console.log('✅ User authenticated:', this.currentUser.email);
+                        } else {
+                            this.currentUser = null;
+                            console.log('🔒 User not authenticated');
+                        }
                     } else {
-                        const errorData = await response.json().catch(() => ({}));
-                        console.log('Auth check failed with status:', response.status, errorData);
                         this.currentUser = null;
-                        this.updateUI();
+                        console.log('🔒 Authentication check failed');
                     }
                 } catch (error) {
-                    console.error('Auth check failed:', error);
+                    console.error('🔒 Authentication error:', error);
                     this.currentUser = null;
-                    this.updateUI();
-                }
-            }
-
-            updateUI() {
-                const userInfo = document.getElementById('user-info');
-                const userName = document.getElementById('user-name');
-                const userTier = document.getElementById('user-tier');
-                const loginBtn = document.getElementById('login-btn');
-                const logoutBtn = document.getElementById('logout-btn');
-                const loginRequired = document.getElementById('login-required');
-                const messageForm = document.getElementById('message-form');
-                const clearBtn = document.getElementById('clear-btn');
-
-                if (this.currentUser) {
-                    userInfo.classList.remove('hidden');
-                    loginBtn.classList.add('hidden');
-                    logoutBtn.classList.remove('hidden');
-                    loginRequired.classList.add('hidden');
-                    messageForm.classList.remove('hidden');
-
-                    userName.textContent = this.currentUser.email ? this.currentUser.email.split('@')[0] : 'User';
-                    
-                    // Set tier badge - handle different property names
-                    const tier = this.currentUser.tier || this.currentUser.subscription_tier || 'free';
-                    const isAdmin = this.currentUser.email && this.currentUser.email.includes('admin');
-                    
-                    console.log('User data:', this.currentUser);
-                    console.log('User tier:', tier, 'Is admin:', isAdmin);
-                    
-                    if (isAdmin) {
-                        userTier.textContent = 'ADMIN';
-                        userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white admin-badge';
-                        // Show clear button for admin users
-                        if (clearBtn) clearBtn.classList.remove('hidden');
-                    } else if (tier === 'pro') {
-                        userTier.textContent = 'PRO';
-                        userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white pro-badge';
-                    } else if (tier === 'premium') {
-                        userTier.textContent = 'PREMIUM';
-                        userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white premium-badge';
-                    } else {
-                        userTier.textContent = 'FREE';
-                        userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-700';
-                    }
-                } else {
-                    userInfo.classList.add('hidden');
-                    loginBtn.classList.remove('hidden');
-                    logoutBtn.classList.add('hidden');
-                    loginRequired.classList.remove('hidden');
-                    messageForm.classList.add('hidden');
-                    if (clearBtn) clearBtn.classList.add('hidden');
                 }
             }
 
             async loadMessages() {
                 try {
-                    const response = await fetch('/api/auth?action=chat-messages&limit=50', {
+                    console.log('📥 Loading messages...');
+                    const response = await fetch(`${this.baseApiUrl}/messages?limit=50`, {
+                        method: 'GET',
                         credentials: 'include'
                     });
                     
                     if (response.ok) {
                         const data = await response.json();
-                        // Ensure we always have an array
-                        this.messages = Array.isArray(data.messages) ? data.messages : 
-                                       Array.isArray(data) ? data : [];
-                        console.log('Loaded messages:', this.messages);
+                        this.messages = data.messages || [];
+                        console.log(`✅ Loaded ${this.messages.length} messages`);
                         this.renderMessages();
                     } else {
-                        throw new Error('Failed to load messages');
+                        throw new Error(`HTTP ${response.status}`);
                     }
                 } catch (error) {
-                    console.error('Load messages failed:', error);
-                    // Fallback to mock data when API is unavailable
-                    this.messages = [
-                        {
-                            id: 1,
-                            message: "Welcome to the IsThisTheDip community chat! 🚀",
-                            username: "System",
-                            userTier: "admin",
-                            timestamp: new Date().toISOString(),
-                            likes: 0
-                        },
-                        {
-                            id: 2,
-                            message: "Bitcoin is looking like a great dip opportunity at these levels!",
-                            username: "CryptoBull",
-                            userTier: "pro",
-                            timestamp: new Date(Date.now() - 300000).toISOString(),
-                            likes: 3
-                        },
-                        {
-                            id: 3,
-                            message: "Fear & Greed index at 65 - market showing some greed. Time to be cautious?",
-                            username: "MarketWatcher",
-                            userTier: "premium",
-                            timestamp: new Date(Date.now() - 600000).toISOString(),
-                            likes: 1
-                        },
-                        {
-                            id: 4,
-                            message: "The new leaderboard with top 100 coins is amazing! Thanks devs!",
-                            username: "TraderJoe",
-                            userTier: "free",
-                            timestamp: new Date(Date.now() - 900000).toISOString(),
-                            likes: 5
-                        },
-                        {
-                            id: 5,
-                            message: "Chat functionality is coming soon! For now, enjoy the mock conversations.",
-                            username: "Admin",
-                            userTier: "admin",
-                            timestamp: new Date(Date.now() - 120000).toISOString(),
-                            likes: 2
-                        }
-                    ];
-                    this.renderMessages();
+                    console.error('❌ Failed to load messages:', error);
+                    this.showFallbackMessages();
                 } finally {
-                    document.getElementById('loading-messages').classList.add('hidden');
+                    this.hideLoadingIndicator();
                 }
+            }
+
+            showFallbackMessages() {
+                this.messages = [
+                    {
+                        id: 1,
+                        message: "Welcome to the IsThisTheDip community chat! 🚀",
+                        username: "System",
+                        userTier: "admin",
+                        timestamp: new Date().toISOString(),
+                        likes: 0
+                    },
+                    {
+                        id: 2,
+                        message: "Chat system is starting up. Real-time functionality coming soon!",
+                        username: "System",
+                        userTier: "admin",
+                        timestamp: new Date(Date.now() - 30000).toISOString(),
+                        likes: 0
+                    }
+                ];
+                this.renderMessages();
             }
 
             async loadStats() {
                 try {
-                    const response = await fetch('/api/auth?action=chat-stats', {
+                    const response = await fetch(`${this.baseApiUrl}/stats`, {
+                        method: 'GET',
                         credentials: 'include'
                     });
                     
                     if (response.ok) {
                         const data = await response.json();
-                        const stats = data.stats || data;
-                        
-                        const totalMessagesEl = document.getElementById('total-messages');
-                        const activeUsersEl = document.getElementById('active-users');
-                        
-                        if (totalMessagesEl) {
-                            totalMessagesEl.textContent = `${stats.totalMessages || 127} messages`;
-                        }
-                        if (activeUsersEl) {
-                            activeUsersEl.textContent = `${stats.activeUsers || 23} users`;
-                        }
+                        const stats = data.stats;
+                        this.updateStatsUI(stats);
+                    } else {
+                        this.updateStatsUI({
+                            totalMessages: 127,
+                            activeUsers: 23,
+                            onlineNow: 7
+                        });
                     }
                 } catch (error) {
-                    console.error('Load stats failed:', error);
-                    // Fallback stats with null checks
-                    const totalMessagesEl = document.getElementById('total-messages');
-                    const activeUsersEl = document.getElementById('active-users');
-                    
-                    if (totalMessagesEl) {
-                        totalMessagesEl.textContent = `127 messages`;
-                    }
-                    if (activeUsersEl) {
-                        activeUsersEl.textContent = `23 users`;
-                    }
+                    console.error('❌ Failed to load stats:', error);
+                    this.updateStatsUI({
+                        totalMessages: 127,
+                        activeUsers: 23,
+                        onlineNow: 7
+                    });
                 }
             }
 
+            updateStatsUI(stats) {
+                const totalEl = document.getElementById('total-messages');
+                const activeEl = document.getElementById('active-users');
+                const onlineEl = document.getElementById('online-now');
+                
+                if (totalEl) totalEl.textContent = `${stats.totalMessages} messages`;
+                if (activeEl) activeEl.textContent = `${stats.activeUsers} users`;
+                if (onlineEl) onlineEl.textContent = `${stats.onlineNow} online`;
+            }
+
+            hideLoadingIndicator() {
+                const loading = document.getElementById('loading-messages');
+                if (loading) loading.classList.add('hidden');
+            }
+
             renderMessages() {
-                const container = document.getElementById('messages-container');
+                const container = document.getElementById('messages-list');
                 const noMessages = document.getElementById('no-messages');
                 
-                // Add null checks to prevent errors
                 if (!container || !noMessages) {
-                    console.error('Messages container or no-messages element not found');
+                    console.error('❌ Message container elements not found');
                     return;
                 }
                 
                 if (this.messages.length === 0) {
                     noMessages.classList.remove('hidden');
+                    container.innerHTML = '';
                     return;
                 }
                 
@@ -374,7 +343,10 @@
                 container.innerHTML = messagesHTML;
                 
                 // Scroll to bottom
-                container.scrollTop = container.scrollHeight;
+                const messagesContainer = document.getElementById('messages-container');
+                if (messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
             }
 
             renderMessage(message) {
@@ -383,39 +355,46 @@
                 const dateStr = date.toLocaleDateString();
                 
                 let tierBadge = '';
-                const userTier = message.userTier || message.user_tier || 'free';
-                const isMessageAdmin = userTier === 'admin' || message.username === 'System' || message.username === 'Admin';
+                const userTier = message.userTier || 'free';
+                const isSystemMessage = message.username === 'System' || message.username === 'Admin';
                 
-                if (isMessageAdmin) {
+                if (isSystemMessage || userTier === 'admin') {
                     tierBadge = '<span class="admin-badge text-white px-2 py-1 text-xs rounded-full ml-2">ADMIN</span>';
                 } else if (userTier === 'pro') {
                     tierBadge = '<span class="pro-badge text-white px-2 py-1 text-xs rounded-full ml-2">PRO</span>';
                 } else if (userTier === 'premium') {
                     tierBadge = '<span class="premium-badge text-white px-2 py-1 text-xs rounded-full ml-2">PREMIUM</span>';
-                } else if (userTier === 'free') {
+                } else {
                     tierBadge = '<span class="bg-gray-200 text-gray-700 px-2 py-1 text-xs rounded-full ml-2">FREE</span>';
                 }
 
-                // Allow deletion if user is admin or it's their own message
-                const isCurrentUserAdmin = this.currentUser && this.currentUser.email && this.currentUser.email.includes('admin');
-                const isOwnMessage = this.currentUser && message.username === this.currentUser.email.split('@')[0];
-                const canDelete = isCurrentUserAdmin || isOwnMessage;
+                // Check if user can delete this message
+                const canDelete = this.canDeleteMessage(message);
                 
                 return `
-                    <div class="message-item border border-gray-200 rounded-lg p-4">
+                    <div class="message-item border border-gray-200 rounded-lg p-4" data-message-id="${message.id}">
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center">
-                                <span class="font-medium text-gray-900">${message.username}</span>
+                                <span class="font-medium text-gray-900">${this.escapeHtml(message.username)}</span>
                                 ${tierBadge}
                             </div>
                             <div class="flex items-center space-x-2">
                                 <span class="text-sm text-gray-500">${dateStr} ${timeStr}</span>
-                                ${canDelete ? `<button onclick="chatApp.deleteMessage(${message.id})" class="text-red-600 hover:text-red-800 text-sm">Delete</button>` : ''}
+                                ${canDelete ? `<button onclick="chat.deleteMessage(${message.id})" class="text-red-600 hover:text-red-800 text-sm">Delete</button>` : ''}
                             </div>
                         </div>
                         <p class="text-gray-800 whitespace-pre-wrap">${this.escapeHtml(message.message)}</p>
                     </div>
                 `;
+            }
+
+            canDeleteMessage(message) {
+                if (!this.currentUser) return false;
+                
+                const isAdmin = this.currentUser.email && this.currentUser.email.includes('admin');
+                const isOwner = message.userId === this.currentUser.id;
+                
+                return isAdmin || isOwner;
             }
 
             escapeHtml(text) {
@@ -425,25 +404,21 @@
             }
 
             setupEventListeners() {
+                console.log('🔧 Setting up event listeners...');
+                
+                // Message input and character counter
                 const messageInput = document.getElementById('message-input');
                 const sendBtn = document.getElementById('send-btn');
                 const charCount = document.getElementById('char-count');
+                const refreshBtn = document.getElementById('refresh-btn');
                 const loginBtn = document.getElementById('login-btn');
                 const logoutBtn = document.getElementById('logout-btn');
-
-                console.log('Setting up event listeners:', {
-                    messageInput: !!messageInput,
-                    sendBtn: !!sendBtn,
-                    charCount: !!charCount,
-                    loginBtn: !!loginBtn,
-                    logoutBtn: !!logoutBtn
-                });
 
                 if (messageInput && charCount && sendBtn) {
                     messageInput.addEventListener('input', () => {
                         const length = messageInput.value.length;
                         charCount.textContent = `${length}/1000`;
-                        sendBtn.disabled = length === 0 || length > 1000;
+                        sendBtn.disabled = length === 0 || length > 1000 || !this.currentUser;
                     });
 
                     messageInput.addEventListener('keydown', (e) => {
@@ -455,47 +430,115 @@
                 }
 
                 if (sendBtn) {
-                    console.log('Adding click listener to send button');
                     sendBtn.addEventListener('click', (e) => {
-                        console.log('Send button clicked!');
                         e.preventDefault();
                         this.sendMessage();
                     });
-                } else {
-                    console.error('Send button not found when setting up event listeners');
+                }
+
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => {
+                        this.loadMessages();
+                        this.loadStats();
+                    });
                 }
 
                 if (loginBtn) {
-                    loginBtn.addEventListener('click', () => window.location.href = '/login');
+                    loginBtn.addEventListener('click', () => {
+                        window.location.href = '/login';
+                    });
                 }
-                
+
                 if (logoutBtn) {
-                    logoutBtn.addEventListener('click', () => this.logout());
+                    logoutBtn.addEventListener('click', () => {
+                        this.logout();
+                    });
+                }
+
+                console.log('✅ Event listeners setup complete');
+            }
+
+            updateUI() {
+                const userInfo = document.getElementById('user-info');
+                const userName = document.getElementById('user-name');
+                const userTier = document.getElementById('user-tier');
+                const loginBtn = document.getElementById('login-btn');
+                const logoutBtn = document.getElementById('logout-btn');
+                const loginRequired = document.getElementById('login-required');
+                const messageForm = document.getElementById('message-form');
+                const sendBtn = document.getElementById('send-btn');
+
+                if (this.currentUser) {
+                    // User is logged in
+                    if (userInfo) userInfo.classList.remove('hidden');
+                    if (loginBtn) loginBtn.classList.add('hidden');
+                    if (logoutBtn) logoutBtn.classList.remove('hidden');
+                    if (loginRequired) loginRequired.classList.add('hidden');
+                    if (messageForm) messageForm.classList.remove('hidden');
+
+                    if (userName) {
+                        userName.textContent = this.currentUser.email ? 
+                            this.currentUser.email.split('@')[0] : 'User';
+                    }
+                    
+                    if (userTier) {
+                        const tier = this.currentUser.tier || 'free';
+                        const isAdmin = this.currentUser.email && this.currentUser.email.includes('admin');
+                        
+                        if (isAdmin) {
+                            userTier.textContent = 'ADMIN';
+                            userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white admin-badge';
+                        } else if (tier === 'pro') {
+                            userTier.textContent = 'PRO';
+                            userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white pro-badge';
+                        } else if (tier === 'premium') {
+                            userTier.textContent = 'PREMIUM';
+                            userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white premium-badge';
+                        } else {
+                            userTier.textContent = 'FREE';
+                            userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-700';
+                        }
+                    }
+
+                    // Enable send button if message input has content
+                    if (sendBtn) {
+                        const messageInput = document.getElementById('message-input');
+                        const hasMessage = messageInput && messageInput.value.trim().length > 0;
+                        sendBtn.disabled = !hasMessage;
+                    }
+                } else {
+                    // User is not logged in
+                    if (userInfo) userInfo.classList.add('hidden');
+                    if (loginBtn) loginBtn.classList.remove('hidden');
+                    if (logoutBtn) logoutBtn.classList.add('hidden');
+                    if (loginRequired) loginRequired.classList.remove('hidden');
+                    if (messageForm) messageForm.classList.add('hidden');
                 }
             }
 
             async sendMessage() {
-                const messageInput = document.getElementById('message-input');
-                const sendBtn = document.getElementById('send-btn');
-                const message = messageInput.value.trim();
-
-                console.log('Send message attempt:', { message, currentUser: this.currentUser });
-
-                if (!message) {
-                    this.showError('Please enter a message');
-                    return;
-                }
-                
                 if (!this.currentUser) {
                     this.showError('Please login to send messages');
                     return;
                 }
 
+                const messageInput = document.getElementById('message-input');
+                const sendBtn = document.getElementById('send-btn');
+                const message = messageInput.value.trim();
+
+                if (!message) {
+                    this.showError('Please enter a message');
+                    return;
+                }
+
+                console.log('📤 Sending message:', message);
+
+                // Disable send button and show loading state
                 sendBtn.disabled = true;
                 sendBtn.textContent = 'Sending...';
 
                 try {
-                    const response = await fetch('/api/auth?action=chat-message', {
+                    const response = await fetch(`${this.baseApiUrl}/send`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -506,19 +549,24 @@
 
                     if (response.ok) {
                         const data = await response.json();
-                        const newMessage = data.message || data;
-                        this.messages.push(newMessage);
-                        this.renderMessages();
+                        console.log('✅ Message sent successfully');
+                        
+                        // Clear input
                         messageInput.value = '';
                         document.getElementById('char-count').textContent = '0/1000';
+                        
+                        // Refresh messages and stats
+                        await this.loadMessages();
                         await this.loadStats();
+                        
+                        this.showSuccess('Message sent successfully!');
                     } else {
                         const error = await response.json();
                         this.showError(error.error || 'Failed to send message');
                     }
                 } catch (error) {
-                    console.error('Send message failed:', error);
-                    this.showError('Failed to send message');
+                    console.error('❌ Send message failed:', error);
+                    this.showError('Failed to send message. Please try again.');
                 } finally {
                     sendBtn.disabled = false;
                     sendBtn.textContent = 'Send Message';
@@ -529,92 +577,86 @@
                 if (!confirm('Are you sure you want to delete this message?')) return;
 
                 try {
-                    const response = await fetch(`/api/auth?action=chat-delete&messageId=${messageId}`, {
+                    const response = await fetch(`${this.baseApiUrl}/delete?messageId=${messageId}`, {
                         method: 'DELETE',
                         credentials: 'include'
                     });
 
                     if (response.ok) {
-                        // Remove message from local array
-                        this.messages = this.messages.filter(m => m.id !== messageId);
-                        this.renderMessages();
+                        console.log('✅ Message deleted successfully');
+                        await this.loadMessages();
                         await this.loadStats();
+                        this.showSuccess('Message deleted successfully!');
                     } else {
                         const error = await response.json();
                         this.showError(error.error || 'Failed to delete message');
                     }
                 } catch (error) {
-                    console.error('Delete message failed:', error);
+                    console.error('❌ Delete message failed:', error);
                     this.showError('Failed to delete message');
                 }
             }
 
-            clearAllMessages() {
-                if (!confirm('Are you sure you want to clear all mock messages? This will only clear messages locally.')) return;
-                
-                this.messages = [];
-                this.renderMessages();
-                this.showError('All messages cleared. Send a new message to test the functionality!');
-            }
-
             async logout() {
                 try {
-                    await fetch('/api/auth/logout', {
+                    await fetch('/api/auth?action=logout', {
                         method: 'POST',
                         credentials: 'include'
                     });
                     this.currentUser = null;
                     this.updateUI();
+                    this.showSuccess('Logged out successfully');
                 } catch (error) {
-                    console.error('Logout failed:', error);
+                    console.error('❌ Logout failed:', error);
+                    this.showError('Logout failed');
                 }
             }
 
             startPolling() {
-                // Poll for new messages every 10 seconds
-                setInterval(async () => {
-                    try {
-                        const response = await fetch('/api/auth?action=chat-messages&limit=50', {
-                            credentials: 'include'
-                        });
-                        
-                        if (response.ok) {
-                            const data = await response.json();
-                            const messages = Array.isArray(data.messages) ? data.messages : 
-                                           Array.isArray(data) ? data : [];
-                            if (messages.length !== this.messages.length) {
-                                this.messages = messages;
-                                this.renderMessages();
-                                await this.loadStats();
-                            }
+                // Poll for new messages every 15 seconds
+                this.pollingInterval = setInterval(async () => {
+                    if (this.isInitialized) {
+                        try {
+                            await this.loadMessages();
+                            await this.loadStats();
+                        } catch (error) {
+                            console.error('❌ Polling failed:', error);
                         }
-                    } catch (error) {
-                        console.error('Polling failed:', error);
                     }
-                }, 10000);
+                }, 15000);
+                
+                console.log('⏰ Started polling for updates');
             }
 
             showError(message) {
-                console.error('Chat error:', message);
+                this.showNotification(message, 'error');
+            }
+
+            showSuccess(message) {
+                this.showNotification(message, 'success');
+            }
+
+            showNotification(message, type) {
+                const className = type === 'error' ? 
+                    'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50' :
+                    'fixed top-4 right-4 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg z-50';
                 
-                // Create a more user-friendly error display
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50';
-                errorDiv.textContent = message;
+                const notification = document.createElement('div');
+                notification.className = className;
+                notification.textContent = message;
                 
-                document.body.appendChild(errorDiv);
+                document.body.appendChild(notification);
                 
-                // Remove error after 5 seconds
                 setTimeout(() => {
-                    if (errorDiv.parentNode) {
-                        errorDiv.parentNode.removeChild(errorDiv);
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
                     }
                 }, 5000);
             }
         }
 
-        // Initialize the chat app
-        const chatApp = new ChatApp();
+        // Initialize the chat application
+        const chat = new IsThisTheDipChat();
     </script>
 </body>
 </html>
