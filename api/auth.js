@@ -29,7 +29,15 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('Auth error:', error);
-    return res.status(500).json({ error: 'Authentication failed' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack?.substring(0, 500)
+    });
+    return res.status(500).json({ 
+      error: 'Authentication failed',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 
