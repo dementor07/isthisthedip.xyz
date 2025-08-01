@@ -1,5 +1,8 @@
 // Consolidated authentication API endpoint
+import { PrismaClient } from '@prisma/client';
 import { getUserByEmail, verifyPassword, generateJWT, createUser, authenticateToken, getUserById } from './prisma-utils.js';
+
+const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -234,8 +237,8 @@ async function handleChatMessage(req, res) {
       return res.status(400).json({ error: 'Message cannot be empty' });
     }
 
-    if (message.length > 500) {
-      return res.status(400).json({ error: 'Message too long (max 500 characters)' });
+    if (message.length > 1000) {
+      return res.status(400).json({ error: 'Message too long (max 1000 characters)' });
     }
 
     // Get user details
