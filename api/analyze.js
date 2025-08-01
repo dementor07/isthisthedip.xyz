@@ -107,7 +107,8 @@ async function performRealAnalysis(crypto, user, options = {}) {
       // For baseline mode, get comprehensive server-side data
       const dataPromises = [
         getCoinGeckoData(crypto),
-        getFearGreedIndex()
+        getFearGreedIndex(),
+        getGlobalMarketData() // Add global market data for Bitcoin dominance
       ];
       
       // Add additional data sources for comprehensive analysis
@@ -119,11 +120,12 @@ async function performRealAnalysis(crypto, user, options = {}) {
       }
       
       const dataResults = await Promise.allSettled(dataPromises);
-      const [priceData, fearGreed, technicals, news] = dataResults;
+      const [priceData, fearGreed, globalData, technicals, news] = dataResults;
 
       // Process results with fallbacks
       const price = priceData.status === 'fulfilled' ? priceData.value : getMockPriceData(crypto);
       const fearGreedData = fearGreed.status === 'fulfilled' ? fearGreed.value : { value: 50 };
+      const globalMarketData = globalData.status === 'fulfilled' ? globalData.value : { btc_dominance: null };
       const techData = technicals.status === 'fulfilled' ? technicals.value : {};
       const newsData = news.status === 'fulfilled' ? news.value : [];
 
@@ -180,6 +182,19 @@ async function performRealAnalysis(crypto, user, options = {}) {
           volume_score: volumeScore,
           fear_greed: fearGreedData.value,
           rsi: rsi,
+          
+          // Comprehensive analysis fields for frontend display
+          bitcoin_dominance: globalMarketData.market_cap_percentage?.btc || 
+                           globalMarketData.btc_dominance || 
+                           price.market_data?.btc_dominance || null,
+          asset_market_cap: price.usd_market_cap || price.market_cap || 0,
+          asset_volume: price.usd_24h_vol || price.total_volume || 0,
+          ath_distance: price.ath_change_percentage || 
+                       (price.ath && currentPrice ? 
+                        ((currentPrice - price.ath) / price.ath * 100) : null),
+          market_cap_change: price.market_cap_change_percentage_24h || 
+                           price.price_change_percentage_24h || 0,
+          
           data_sources: getDataSourcesUsed([priceData, fearGreed, technicals, news]),
           data_quality: price.data_quality || 'Good'
         },
@@ -367,6 +382,25 @@ async function getFearGreedIndex() {
     } catch (error) {
         console.error('Error fetching Fear & Greed Index:', error);
         return { value: 50 }; // Default neutral value
+    }
+}
+
+async function getGlobalMarketData() {
+    try {
+        const response = await fetch('https://api.coingecko.com/api/v3/global');
+        if (!response.ok) throw new Error('Global market data fetch failed');
+        
+        const data = await response.json();
+        return {
+            btc_dominance: data.data?.market_cap_percentage?.btc || null,
+            eth_dominance: data.data?.market_cap_percentage?.eth || null,
+            total_market_cap: data.data?.total_market_cap?.usd || null,
+            total_volume: data.data?.total_volume?.usd || null,
+            market_cap_percentage: data.data?.market_cap_percentage || {}
+        };
+    } catch (error) {
+        console.error('Global market data error:', error);
+        return { btc_dominance: null, market_cap_percentage: {} };
     }
 }
 
