@@ -1,12 +1,48 @@
 class CryptoCalculator {
   constructor() {
     this.isAnalyzing = false;
+    this.realtimeAnalyzer = null;
+    this.currentSymbol = null;
+    this.baselineAnalysis = null;
+    this.isRealtimeActive = false;
+    this.realtimeUpdateInterval = null;
     this.init();
   }
 
   init() {
     this.attachEventListeners();
     this.updateSearchCounter();
+    this.initializeRealtimeAnalyzer();
+  }
+
+  initializeRealtimeAnalyzer() {
+    try {
+      if (typeof RealTimeAnalyzer !== 'undefined') {
+        this.realtimeAnalyzer = new RealTimeAnalyzer();
+        this.setupRealtimeCallbacks();
+        console.log('✅ Real-time analyzer initialized');
+      } else {
+        console.warn('⚠️ Real-time analyzer not available - falling back to static analysis');
+      }
+    } catch (error) {
+      console.error('❌ Failed to initialize real-time analyzer:', error);
+    }
+  }
+
+  setupRealtimeCallbacks() {
+    if (!this.realtimeAnalyzer) return;
+
+    this.realtimeAnalyzer.on('analysis_update', (analysis) => {
+      this.updateRealtimeDisplay(analysis);
+    });
+
+    this.realtimeAnalyzer.on('server_sync', (serverAnalysis) => {
+      this.handleServerSync(serverAnalysis);
+    });
+
+    this.realtimeAnalyzer.on('exchange_connected', (exchangeName) => {
+      this.updateConnectionStatus(exchangeName, 'connected');
+    });
   }
 
   attachEventListeners() {
@@ -67,34 +103,71 @@ class CryptoCalculator {
     }
 
     this.isAnalyzing = true;
+    this.currentSymbol = crypto.toLowerCase();
     this.showLoading();
 
     try {
-      const response = await fetch('/api/analyze', {
+      // Step 1: Get baseline comprehensive analysis from server
+      console.log('🔍 Getting baseline analysis for', crypto);
+      const baselineResponse = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ crypto })
+        body: JSON.stringify({ 
+          crypto,
+          mode: 'baseline',
+          realtime: false
+        })
       });
 
-      const data = await response.json();
+      const baselineData = await baselineResponse.json();
 
-      if (response.ok) {
-        console.log('Analysis result:', data); // Debug log
-        this.displayResults(data);
-        this.updateSearchCounter();
-      } else {
-        if (response.status === 429) {
-          this.showUpgradePrompt(data.error);
-        } else {
-          this.showError(data.error || 'Analysis failed');
+      if (!baselineResponse.ok) {
+        throw new Error(baselineData.error || 'Analysis failed');
+      }
+
+      // Store baseline analysis
+      this.baselineAnalysis = baselineData;
+      
+      // Step 2: Start real-time analysis if available
+      if (this.realtimeAnalyzer) {
+        console.log('⚡ Starting real-time analysis...');
+        try {
+          await this.realtimeAnalyzer.startAnalysis(crypto);
+          this.isRealtimeActive = true;
+          this.showRealtimeStatus('connected');
+        } catch (realtimeError) {
+          console.warn('⚠️ Real-time analysis failed, using static analysis:', realtimeError);
+          this.showRealtimeStatus('failed');
         }
       }
+
+      // Step 3: Display initial results
+      this.displayResults(baselineData);
+      this.updateSearchCounter();
+      
+      // Step 4: Show real-time enhancement UI if active
+      if (this.isRealtimeActive) {
+        this.showRealtimeEnhancements();
+      }
+      
     } catch (error) {
       console.error('Analysis error:', error);
-      this.showError('Network error. Please try again.');
+      
+      // Stop real-time analysis on error
+      if (this.isRealtimeActive && this.realtimeAnalyzer) {
+        this.realtimeAnalyzer.stopAnalysis();
+        this.isRealtimeActive = false;
+        this.showRealtimeStatus('stopped');
+      }
+      
+      if (error.message.includes('429')) {
+        this.showUpgradePrompt('Daily search limit reached. Upgrade for unlimited searches.');
+      } else {
+        this.showError(error.message || 'Analysis failed. Please try again.');
+      }
     } finally {
       this.isAnalyzing = false;
     }
@@ -1091,5 +1164,277 @@ window.quickCheck = (crypto) => {
     window.cryptoCalculator.quickCheck(crypto);
   } else {
     console.error('Crypto calculator not initialized');
+  }
+};
+
+// Real-time analysis methods
+CryptoCalculator.prototype.updateRealtimeDisplay = function(analysis) {
+  if (!this.isRealtimeActive) return;
+
+  console.log('⚡ Real-time update received:', analysis);
+  
+  // Update current price
+  const priceElement = document.getElementById('currentPrice');
+  if (priceElement && analysis.currentPrice) {
+    const price = analysis.currentPrice.price;
+    priceElement.textContent = `$${this.formatNumber(price)}`;
+    this.animatePriceChange(priceElement, price);
+  }
+
+  // Update momentum indicators
+  if (analysis.momentum) {
+    this.updateMomentumIndicators(analysis.momentum);
+  }
+
+  // Update live signals
+  if (analysis.signals) {
+    this.updateLiveSignals(analysis.signals);
+  }
+
+  // Update volatility indicator
+  if (analysis.volatility) {
+    this.updateVolatilityIndicator(analysis.volatility);
+  }
+
+  // Update technical indicators
+  if (analysis.technicals) {
+    this.updateTechnicalIndicators(analysis.technicals);
+  }
+
+  // Update data quality indicator
+  if (analysis.quality) {
+    this.updateDataQualityIndicator(analysis.quality);
+  }
+};
+
+CryptoCalculator.prototype.showRealtimeEnhancements = function() {
+  // Add real-time status indicator to the UI
+  const resultsDiv = document.getElementById('results');
+  if (!resultsDiv || document.getElementById('realtime-status')) return;
+
+  const realtimeStatusHTML = `
+    <div id="realtime-status" class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-3"></div>
+          <div>
+            <p class="text-sm font-semibold text-green-800">🔴 LIVE Analysis Active</p>
+            <p class="text-xs text-green-600">Real-time updates from multiple exchanges</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span id="connection-count" class="text-xs bg-green-100 px-2 py-1 rounded">0/3 exchanges</span>
+          <button onclick="cryptoCalculator.toggleRealtimeAnalysis()" class="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">
+            Stop Live
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="realtime-indicators" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white border rounded-lg p-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Live Momentum</h4>
+        <div id="live-rsi" class="text-2xl font-bold text-gray-900">--</div>
+        <div class="text-xs text-gray-500">RSI (14)</div>
+      </div>
+      <div class="bg-white border rounded-lg p-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Volume Spike</h4>
+        <div id="live-volume" class="text-2xl font-bold text-gray-900">--</div>
+        <div class="text-xs text-gray-500">vs Average</div>
+      </div>
+      <div class="bg-white border rounded-lg p-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Data Quality</h4>
+        <div id="data-quality" class="text-2xl font-bold text-green-600">Excellent</div>
+        <div class="text-xs text-gray-500">Real-time feeds</div>
+      </div>
+    </div>
+
+    <div id="live-signals" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 hidden">
+      <h4 class="text-sm font-semibold text-blue-800 mb-2">🎯 Live Trading Signals</h4>
+      <div id="signals-list" class="space-y-1"></div>
+    </div>
+  `;
+
+  resultsDiv.insertAdjacentHTML('afterbegin', realtimeStatusHTML);
+};
+
+CryptoCalculator.prototype.showRealtimeStatus = function(status) {
+  const statusElement = document.getElementById('realtime-status');
+  if (!statusElement) return;
+
+  const statusIndicator = statusElement.querySelector('.w-3.h-3');
+  const statusText = statusElement.querySelector('p');
+  
+  switch (status) {
+    case 'connected':
+      statusIndicator.className = 'w-3 h-3 bg-green-500 rounded-full animate-pulse mr-3';
+      statusText.textContent = '🔴 LIVE Analysis Active';
+      break;
+    case 'failed':
+      statusIndicator.className = 'w-3 h-3 bg-yellow-500 rounded-full mr-3';
+      statusText.textContent = '⚠️ Static Analysis (Real-time unavailable)';
+      break;
+    case 'stopped':
+      statusIndicator.className = 'w-3 h-3 bg-gray-400 rounded-full mr-3';
+      statusText.textContent = '⏹️ Live Analysis Stopped';
+      break;
+  }
+};
+
+CryptoCalculator.prototype.updateConnectionStatus = function(exchangeName, status) {
+  const connectionElement = document.getElementById('connection-count');
+  if (!connectionElement) return;
+
+  // Get current connection status from real-time analyzer
+  if (this.realtimeAnalyzer) {
+    const metrics = this.realtimeAnalyzer.getMetrics();
+    const activeConnections = Object.values(metrics.connectionStatus).filter(s => s === 'connected').length;
+    connectionElement.textContent = `${activeConnections}/3 exchanges`;
+  }
+};
+
+CryptoCalculator.prototype.updateMomentumIndicators = function(momentum) {
+  const rsiElement = document.getElementById('live-rsi');
+  if (rsiElement && momentum.rsi) {
+    rsiElement.textContent = Math.round(momentum.rsi);
+    
+    // Update color based on RSI value
+    rsiElement.className = 'text-2xl font-bold';
+    if (momentum.rsi < 30) {
+      rsiElement.className += ' text-green-600'; // Oversold = buy opportunity
+    } else if (momentum.rsi > 70) {
+      rsiElement.className += ' text-red-600'; // Overbought = caution
+    } else {
+      rsiElement.className += ' text-gray-900'; // Neutral
+    }
+  }
+};
+
+CryptoCalculator.prototype.updateLiveSignals = function(signals) {
+  const signalsContainer = document.getElementById('live-signals');
+  const signalsList = document.getElementById('signals-list');
+  
+  if (!signalsContainer || !signalsList) return;
+
+  if (signals.length === 0) {
+    signalsContainer.classList.add('hidden');
+    return;
+  }
+
+  signalsContainer.classList.remove('hidden');
+  signalsList.innerHTML = signals.map(signal => {
+    const color = signal.type === 'BUY' ? 'text-green-700' : 'text-red-700';
+    const icon = signal.type === 'BUY' ? '📈' : '📉';
+    const strength = signal.strength === 'strong' ? 'STRONG' : signal.strength.toUpperCase();
+    
+    return `
+      <div class="flex items-center justify-between text-sm">
+        <span class="${color}">${icon} ${strength} ${signal.type}</span>
+        <span class="text-gray-600">${signal.reason}</span>
+      </div>
+    `;
+  }).join('');
+};
+
+CryptoCalculator.prototype.updateDataQualityIndicator = function(quality) {
+  const qualityElement = document.getElementById('data-quality');
+  if (!qualityElement) return;
+
+  qualityElement.textContent = quality.quality || 'Good';
+  
+  // Update color based on quality
+  qualityElement.className = 'text-2xl font-bold';
+  switch (quality.quality) {
+    case 'excellent':
+      qualityElement.className += ' text-green-600';
+      break;
+    case 'good':
+      qualityElement.className += ' text-blue-600';
+      break;
+    case 'fair':
+      qualityElement.className += ' text-yellow-600';
+      break;
+    default:
+      qualityElement.className += ' text-red-600';
+  }
+};
+
+CryptoCalculator.prototype.animatePriceChange = function(element, newPrice) {
+  if (!element.dataset.lastPrice) {
+    element.dataset.lastPrice = newPrice;
+    return;
+  }
+
+  const lastPrice = parseFloat(element.dataset.lastPrice);
+  const priceChange = newPrice - lastPrice;
+
+  if (priceChange !== 0) {
+    // Flash animation based on price direction
+    const flashColor = priceChange > 0 ? 'bg-green-200' : 'bg-red-200';
+    element.classList.add(flashColor);
+    
+    setTimeout(() => {
+      element.classList.remove(flashColor);
+    }, 500);
+  }
+
+  element.dataset.lastPrice = newPrice;
+};
+
+CryptoCalculator.prototype.toggleRealtimeAnalysis = function() {
+  if (!this.realtimeAnalyzer) return;
+
+  if (this.isRealtimeActive) {
+    // Stop real-time analysis
+    this.realtimeAnalyzer.stopAnalysis();
+    this.isRealtimeActive = false;
+    this.showRealtimeStatus('stopped');
+    
+    // Remove real-time UI elements
+    const realtimeElements = ['realtime-status', 'realtime-indicators', 'live-signals'];
+    realtimeElements.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) element.remove();
+    });
+  } else {
+    // Restart real-time analysis
+    if (this.currentSymbol) {
+      this.realtimeAnalyzer.startAnalysis(this.currentSymbol);
+      this.isRealtimeActive = true;
+      this.showRealtimeEnhancements();
+      this.showRealtimeStatus('connected');
+    }
+  }
+};
+
+CryptoCalculator.prototype.handleServerSync = function(serverAnalysis) {
+  console.log('🔄 Server sync completed:', serverAnalysis);
+  
+  // Update comprehensive analysis data while keeping real-time updates
+  if (serverAnalysis && serverAnalysis.details) {
+    // Update fear & greed index
+    const fearGreedElements = document.querySelectorAll('[data-fear-greed]');
+    fearGreedElements.forEach(el => {
+      el.textContent = serverAnalysis.details.fear_greed || '--';
+    });
+    
+    // Update market analysis components
+    if (serverAnalysis.analysis) {
+      this.updateMarketAnalysisComponents(serverAnalysis.analysis);
+    }
+  }
+};
+
+CryptoCalculator.prototype.updateMarketAnalysisComponents = function(analysis) {
+  // Update risk level
+  const riskElement = document.querySelector('[data-risk-level]');
+  if (riskElement && analysis.risk_level) {
+    riskElement.textContent = analysis.risk_level;
+  }
+  
+  // Update opportunity rating
+  const opportunityElement = document.querySelector('[data-opportunity]');
+  if (opportunityElement && analysis.opportunity_rating) {
+    opportunityElement.textContent = analysis.opportunity_rating;
   }
 };
