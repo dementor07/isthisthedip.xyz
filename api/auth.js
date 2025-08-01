@@ -176,46 +176,39 @@ async function handleChatMessages(req, res) {
 
   try {
     const { limit = 50 } = req.query;
+    const limitNum = Math.min(parseInt(limit) || 50, 100); // Max 100 messages
     
-    // Return mock data for now
-    const mockMessages = [
-      {
-        id: 1,
-        message: "Welcome to the IsThisTheDip community chat! 🚀",
-        username: "System",
-        userTier: "admin",
-        timestamp: new Date().toISOString(),
-        likes: 0
+    const messages = await prisma.chatMessage.findMany({
+      where: {
+        isDeleted: false
       },
-      {
-        id: 2,
-        message: "Bitcoin is looking like a great dip opportunity at these levels!",
-        username: "CryptoBull",
-        userTier: "pro",
-        timestamp: new Date(Date.now() - 300000).toISOString(),
-        likes: 3
+      orderBy: {
+        createdAt: 'desc'
       },
-      {
-        id: 3,
-        message: "Fear & Greed index at 65 - market showing some greed. Time to be cautious?",
-        username: "MarketWatcher",
-        userTier: "premium",
-        timestamp: new Date(Date.now() - 600000).toISOString(),
-        likes: 1
-      },
-      {
-        id: 4,
-        message: "The new leaderboard with top 100 coins is amazing! Thanks devs!",
-        username: "TraderJoe",
-        userTier: "free",
-        timestamp: new Date(Date.now() - 900000).toISOString(),
-        likes: 5
+      take: limitNum,
+      select: {
+        id: true,
+        message: true,
+        username: true,
+        userTier: true,
+        likes: true,
+        createdAt: true
       }
-    ];
+    });
+
+    // Transform data for frontend compatibility
+    const formattedMessages = messages.reverse().map(msg => ({
+      id: msg.id,
+      message: msg.message,
+      username: msg.username,
+      userTier: msg.userTier,
+      likes: msg.likes,
+      timestamp: msg.createdAt.toISOString()
+    }));
 
     return res.status(200).json({
       success: true,
-      messages: mockMessages
+      messages: formattedMessages
     });
 
   } catch (error) {
@@ -251,19 +244,34 @@ async function handleChatMessage(req, res) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    // Return success with mock data for now
-    const newMessage = {
-      id: Date.now(),
-      message: message.trim(),
-      username: user.email.split('@')[0],
-      userTier: user.tier || 'free',
-      timestamp: new Date().toISOString(),
-      likes: 0
-    };
+    // Save message to database
+    const newMessage = await prisma.chatMessage.create({
+      data: {
+        userId: user.id,
+        message: message.trim(),
+        username: user.email.split('@')[0],
+        userTier: user.tier || 'free'
+      },
+      select: {
+        id: true,
+        message: true,
+        username: true,
+        userTier: true,
+        likes: true,
+        createdAt: true
+      }
+    });
 
     return res.status(200).json({
       success: true,
-      message: newMessage
+      message: {
+        id: newMessage.id,
+        message: newMessage.message,
+        username: newMessage.username,
+        userTier: newMessage.userTier,
+        likes: newMessage.likes,
+        timestamp: newMessage.createdAt.toISOString()
+      }
     });
 
   } catch (error) {
@@ -278,21 +286,45 @@ async function handleChatStats(req, res) {
   }
 
   try {
-    // Return mock stats for now
+    // Get total message count
+    const totalMessages = await prisma.chatMessage.count({
+      where: {
+        isDeleted: false
+      }
+    });
+
+    // Get unique users who have posted messages
+    const activeUsers = await prisma.chatMessage.findMany({
+      where: {
+        isDeleted: false
+      },
+      select: {
+        userId: true
+      },
+      distinct: ['userId']
+    });
+
+    // Get messages from last 24 hours
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const messagesLast24h = await prisma.chatMessage.count({
+      where: {
+        isDeleted: false,
+        createdAt: {
+          gte: yesterday
+        }
+      }
+    });
+
     const stats = {
-      totalMessages: 127,
-      activeUsers: 23,
-      onlineNow: 8,
-      topDiscussions: [
-        "Bitcoin Analysis",
-        "Fear & Greed Discussion", 
-        "Altcoin Opportunities"
-      ]
+      totalMessages,
+      activeUsers: activeUsers.length,
+      onlineNow: Math.max(1, Math.floor(activeUsers.length * 0.3)), // Estimate
+      messagesLast24h
     };
 
     return res.status(200).json({
       success: true,
-      stats: stats
+      stats
     });
 
   } catch (error) {
@@ -324,8 +356,40 @@ async function handleChatDelete(req, res) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    // For now, just return success (since we're using mock data)
-    // In a real implementation, you'd check if user owns the message or is admin
+    // Check if message exists and get its details
+    const existingMessage = await prisma.chatMessage.findUnique({
+      where: {
+        id: parseInt(messageId)
+      },
+      select: {
+        id: true,
+        userId: true,
+        isDeleted: true
+      }
+    });
+
+    if (!existingMessage || existingMessage.isDeleted) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Check if user owns the message or is admin
+    const isAdmin = user.email && user.email.includes('admin');
+    const isOwner = existingMessage.userId === user.id;
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+
+    // Soft delete the message
+    await prisma.chatMessage.update({
+      where: {
+        id: parseInt(messageId)
+      },
+      data: {
+        isDeleted: true
+      }
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Message deleted successfully'
