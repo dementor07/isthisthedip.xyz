@@ -197,7 +197,7 @@
 
             async loadMessages() {
                 try {
-                    const response = await fetch('/api/chat/messages?limit=50', {
+                    const response = await fetch('/api/auth?action=chat-messages&limit=50', {
                         credentials: 'include'
                     });
                     

@@ -173,9 +173,10 @@
                     const tier = this.currentUser.tier || this.currentUser.subscription_tier || 'free';
                     const isAdmin = this.currentUser.email && this.currentUser.email.includes('admin');
                     
+                    console.log('User data:', this.currentUser);
                     console.log('User tier:', tier, 'Is admin:', isAdmin);
                     
-                    if (isAdmin || tier === 'admin') {
+                    if (isAdmin) {
                         userTier.textContent = 'ADMIN';
                         userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white admin-badge';
                     } else if (tier === 'pro') {
@@ -199,7 +200,7 @@
 
             async loadMessages() {
                 try {
-                    const response = await fetch('/api/chat?action=messages&limit=50', {
+                    const response = await fetch('/api/auth?action=chat-messages&limit=50', {
                         credentials: 'include'
                     });
                     
@@ -374,7 +375,7 @@
                 sendBtn.textContent = 'Sending...';
 
                 try {
-                    const response = await fetch('/api/chat/message', {
+                    const response = await fetch('/api/auth?action=chat-message', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

@@ -24,6 +24,10 @@ export default async function handler(req, res) {
         return await handleMe(req, res);
       case 'logout':
         return await handleLogout(req, res);
+      case 'chat-message':
+        return await handleChatMessage(req, res);
+      case 'chat-messages':
+        return await handleChatMessages(req, res);
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }
@@ -159,4 +163,107 @@ async function handleLogout(req, res) {
     success: true,
     message: 'Logged out successfully'
   });
+}
+
+async function handleChatMessages(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { limit = 50 } = req.query;
+    
+    // Return mock data for now
+    const mockMessages = [
+      {
+        id: 1,
+        message: "Welcome to the IsThisTheDip community chat! 🚀",
+        username: "System",
+        userTier: "admin",
+        timestamp: new Date().toISOString(),
+        likes: 0
+      },
+      {
+        id: 2,
+        message: "Bitcoin is looking like a great dip opportunity at these levels!",
+        username: "CryptoBull",
+        userTier: "pro",
+        timestamp: new Date(Date.now() - 300000).toISOString(),
+        likes: 3
+      },
+      {
+        id: 3,
+        message: "Fear & Greed index at 65 - market showing some greed. Time to be cautious?",
+        username: "MarketWatcher",
+        userTier: "premium",
+        timestamp: new Date(Date.now() - 600000).toISOString(),
+        likes: 1
+      },
+      {
+        id: 4,
+        message: "The new leaderboard with top 100 coins is amazing! Thanks devs!",
+        username: "TraderJoe",
+        userTier: "free",
+        timestamp: new Date(Date.now() - 900000).toISOString(),
+        likes: 5
+      }
+    ];
+
+    return res.status(200).json({
+      success: true,
+      messages: mockMessages
+    });
+
+  } catch (error) {
+    console.error('Error fetching chat messages:', error);
+    return res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+}
+
+async function handleChatMessage(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    // Authenticate user
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { message } = req.body;
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({ error: 'Message cannot be empty' });
+    }
+
+    if (message.length > 500) {
+      return res.status(400).json({ error: 'Message too long (max 500 characters)' });
+    }
+
+    // Get user details
+    const user = await getUserById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    // Return success with mock data for now
+    const newMessage = {
+      id: Date.now(),
+      message: message.trim(),
+      username: user.email.split('@')[0],
+      userTier: user.tier || 'free',
+      timestamp: new Date().toISOString(),
+      likes: 0
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: newMessage
+    });
+
+  } catch (error) {
+    console.error('Error posting chat message:', error);
+    return res.status(500).json({ error: 'Failed to post message' });
+  }
 }
