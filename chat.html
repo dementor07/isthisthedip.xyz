@@ -138,18 +138,23 @@
 
             async checkAuth() {
                 try {
+                    console.log('Checking authentication...');
                     const response = await fetch('/api/auth?action=me', {
                         credentials: 'include'
                     });
                     
+                    console.log('Auth response status:', response.status);
+                    
                     if (response.ok) {
                         const data = await response.json();
+                        console.log('Auth response data:', data);
                         // Handle both direct user object and wrapped response
                         this.currentUser = data.user || data;
                         console.log('Auth check successful:', this.currentUser);
                         this.updateUI();
                     } else {
-                        console.log('Auth check failed with status:', response.status);
+                        const errorData = await response.json().catch(() => ({}));
+                        console.log('Auth check failed with status:', response.status, errorData);
                         this.currentUser = null;
                         this.updateUI();
                     }
@@ -393,7 +398,17 @@
                 const sendBtn = document.getElementById('send-btn');
                 const message = messageInput.value.trim();
 
-                if (!message || !this.currentUser) return;
+                console.log('Send message attempt:', { message, currentUser: this.currentUser });
+
+                if (!message) {
+                    this.showError('Please enter a message');
+                    return;
+                }
+                
+                if (!this.currentUser) {
+                    this.showError('Please login to send messages');
+                    return;
+                }
 
                 sendBtn.disabled = true;
                 sendBtn.textContent = 'Sending...';
@@ -499,7 +514,21 @@
             }
 
             showError(message) {
-                alert(message); // Simple error display
+                console.error('Chat error:', message);
+                
+                // Create a more user-friendly error display
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50';
+                errorDiv.textContent = message;
+                
+                document.body.appendChild(errorDiv);
+                
+                // Remove error after 5 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.parentNode.removeChild(errorDiv);
+                    }
+                }, 5000);
             }
         }
 
