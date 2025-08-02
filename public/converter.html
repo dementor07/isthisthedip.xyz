@@ -422,9 +422,9 @@
         // Fetch real-time crypto prices and fiat rates
         async function fetchRealTimeRates() {
             try {
-                // Get crypto prices
+                // Get crypto prices in multiple currencies
                 const cryptos = Object.keys(currencyData).filter(key => currencyData[key].type === 'crypto').join(',');
-                const cryptoResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptos}&vs_currencies=usd&include_24hr_change=true`);
+                const cryptoResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptos}&vs_currencies=usd,eur,gbp,jpy,cad,aud&include_24hr_change=true`);
                 const cryptoData = await cryptoResponse.json();
                 
                 // Update crypto prices
@@ -432,23 +432,23 @@
                     if (currencyData[key].type === 'crypto' && cryptoData[key]) {
                         currencyData[key].price = cryptoData[key].usd;
                         currencyData[key].change_24h = cryptoData[key].usd_24h_change;
+                        // Store all currency prices for accurate conversions
+                        currencyData[key].prices = cryptoData[key];
                     }
                 });
 
-                // Get fiat exchange rates
-                const fiatResponse = await fetch(`https://api.coingecko.com/api/v3/exchange_rates`);
-                const fiatData = await fiatResponse.json();
-                
-                // Update fiat rates
-                if (fiatData.rates) {
-                    if (fiatData.rates.eur) currencyData.eur.price = 1 / fiatData.rates.eur.value;
-                    if (fiatData.rates.gbp) currencyData.gbp.price = 1 / fiatData.rates.gbp.value;
-                    if (fiatData.rates.jpy) currencyData.jpy.price = fiatData.rates.jpy.value;
-                    if (fiatData.rates.cad) currencyData.cad.price = fiatData.rates.cad.value;
-                    if (fiatData.rates.aud) currencyData.aud.price = fiatData.rates.aud.value;
+                // Update fiat rates using Bitcoin as reference (more reliable)
+                if (cryptoData.bitcoin) {
+                    const btcPrices = cryptoData.bitcoin;
+                    currencyData.usd.price = 1; // USD base
+                    currencyData.eur.price = btcPrices.usd / btcPrices.eur; // EUR to USD rate
+                    currencyData.gbp.price = btcPrices.usd / btcPrices.gbp; // GBP to USD rate  
+                    currencyData.jpy.price = btcPrices.usd / btcPrices.jpy; // JPY to USD rate
+                    currencyData.cad.price = btcPrices.usd / btcPrices.cad; // CAD to USD rate
+                    currencyData.aud.price = btcPrices.usd / btcPrices.aud; // AUD to USD rate
                 }
                 
-                console.log('✅ Real-time rates updated');
+                console.log('✅ Real-time rates updated with multi-currency support');
                 updateMarketOverview();
                 updatePriceDisplay();
                 convert();
@@ -471,25 +471,41 @@
                 return;
             }
 
-            // Get prices in USD
-            const fromPrice = currencyData[fromCurrency].price;
-            const toPrice = currencyData[toCurrency].price;
-
             let convertedAmount;
 
             if (currencyData[fromCurrency].type === 'crypto' && currencyData[toCurrency].type === 'fiat') {
-                // Crypto to fiat
-                convertedAmount = fromAmount * fromPrice / toPrice;
+                // Crypto to fiat - use direct rates from API
+                const cryptoPrices = currencyData[fromCurrency].prices;
+                const fiatSymbol = toCurrency.toLowerCase();
+                
+                if (cryptoPrices && cryptoPrices[fiatSymbol]) {
+                    // Direct conversion available
+                    convertedAmount = fromAmount * cryptoPrices[fiatSymbol];
+                } else {
+                    // Fallback to USD conversion
+                    const usdValue = fromAmount * currencyData[fromCurrency].price;
+                    convertedAmount = usdValue / currencyData[toCurrency].price;
+                }
             } else if (currencyData[fromCurrency].type === 'fiat' && currencyData[toCurrency].type === 'crypto') {
-                // Fiat to crypto
-                convertedAmount = fromAmount * fromPrice / toPrice;
+                // Fiat to crypto - use direct rates from API
+                const cryptoPrices = currencyData[toCurrency].prices;
+                const fiatSymbol = fromCurrency.toLowerCase();
+                
+                if (cryptoPrices && cryptoPrices[fiatSymbol]) {
+                    // Direct conversion available
+                    convertedAmount = fromAmount / cryptoPrices[fiatSymbol];
+                } else {
+                    // Fallback to USD conversion
+                    const usdValue = fromAmount * currencyData[fromCurrency].price;
+                    convertedAmount = usdValue / currencyData[toCurrency].price;
+                }
             } else if (currencyData[fromCurrency].type === 'crypto' && currencyData[toCurrency].type === 'crypto') {
-                // Crypto to crypto
-                const usdValue = fromAmount * fromPrice;
-                convertedAmount = usdValue / toPrice;
+                // Crypto to crypto - use USD as base
+                const usdValue = fromAmount * currencyData[fromCurrency].price;
+                convertedAmount = usdValue / currencyData[toCurrency].price;
             } else {
-                // Fiat to fiat
-                convertedAmount = fromAmount * fromPrice / toPrice;
+                // Fiat to fiat - use exchange rates
+                convertedAmount = fromAmount * currencyData[fromCurrency].price / currencyData[toCurrency].price;
             }
 
             // Display result
@@ -499,7 +515,7 @@
             });
 
             // Update exchange rate display
-            const exchangeRate = fromPrice / toPrice;
+            const exchangeRate = convertedAmount / fromAmount;
             document.getElementById('exchangeRate').textContent = 
                 `1 ${currencyData[fromCurrency].symbol} = ${exchangeRate.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
