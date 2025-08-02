@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Profit Calculator - Calculate Bitcoin & Ethereum Gains | Free Tool</title>
+    <meta name="description" content="Free cryptocurrency profit calculator. Calculate Bitcoin, Ethereum, and altcoin gains/losses with our advanced crypto profit & loss calculator. Track portfolio performance.">
+    <meta property="og:title" content="Crypto Profit Calculator - Calculate Crypto Gains & Losses">
+    <meta property="og:description" content="Calculate your cryptocurrency profits and losses with our free advanced calculator. Supports Bitcoin, Ethereum, and 500+ cryptocurrencies.">
+    <meta property="og:url" content="https://isthisthedip.xyz/profit-calculator">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="IsThisTheDip.xyz">
+    <link rel="canonical" href="https://isthisthedip.xyz/profit-calculator">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Cryptocurrency Profit Calculator",
+        "description": "Free crypto profit and loss calculator for Bitcoin, Ethereum, and all major cryptocurrencies. Calculate gains, losses, and portfolio performance.",
+        "url": "https://isthisthedip.xyz/profit-calculator",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "name": "Free Crypto Profit Calculator"
+        },
+        "featureList": [
+            "Cryptocurrency profit/loss calculation",
+            "Portfolio performance tracking",
+            "Multi-currency support",
+            "Tax calculation assistance",
+            "Historical price data integration"
+        ]
+    }
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .calculator-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .profit-positive {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .profit-negative {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .result-card {
+            transition: transform 0.3s ease;
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="hidden md:flex justify-between items-center">
+                <div class="flex items-center space-x-6">
+                    <a href="/" class="text-2xl font-bold flex items-center hover:opacity-80 transition-opacity">
+                        <span class="mr-2">💰</span> Crypto Profit Calculator
+                    </a>
+                    <nav class="flex items-center space-x-4">
+                        <a href="/" class="text-sm hover:text-purple-200 transition-colors">Home</a>
+                        <a href="/profit-calculator" class="text-sm text-purple-200">💰 Profit Calculator</a>
+                        <a href="/converter" class="text-sm hover:text-purple-200 transition-colors">🔄 Converter</a>
+                        <a href="/bitcoin" class="text-sm hover:text-purple-200 transition-colors">₿ Bitcoin</a>
+                        <a href="/ethereum" class="text-sm hover:text-purple-200 transition-colors">Ξ Ethereum</a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Hero Section -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">
+                <span class="text-5xl mr-3">💰</span>
+                Crypto Profit Calculator
+            </h1>
+            <p class="text-xl text-gray-400 mb-6 max-w-3xl mx-auto">
+                Calculate your cryptocurrency profits and losses with our free advanced calculator. Track Bitcoin, Ethereum, and altcoin portfolio performance with real-time data.
+            </p>
+            <div class="flex flex-wrap justify-center gap-4 text-sm">
+                <span class="bg-green-600 text-white px-3 py-1 rounded-full">✓ 500+ Cryptocurrencies</span>
+                <span class="bg-blue-600 text-white px-3 py-1 rounded-full">✓ Real-time Prices</span>
+                <span class="bg-purple-600 text-white px-3 py-1 rounded-full">✓ Tax Calculations</span>
+                <span class="bg-yellow-600 text-black px-3 py-1 rounded-full">✓ Portfolio Tracking</span>
+            </div>
+        </div>
+
+        <!-- Calculator Tool -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <div class="calculator-card rounded-2xl p-8">
+                <h2 class="text-2xl font-bold mb-6 text-center">Calculate Your Crypto Gains & Losses</h2>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Investment Input -->
+                    <div class="space-y-6">
+                        <h3 class="text-xl font-semibold mb-4">Investment Details</h3>
+                        
+                        <!-- Cryptocurrency Selection -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Cryptocurrency</label>
+                            <select id="cryptoSelect" class="w-full px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                                <option value="bitcoin">Bitcoin (BTC)</option>
+                                <option value="ethereum">Ethereum (ETH)</option>
+                                <option value="solana">Solana (SOL)</option>
+                                <option value="cardano">Cardano (ADA)</option>
+                                <option value="dogecoin">Dogecoin (DOGE)</option>
+                                <option value="polygon">Polygon (MATIC)</option>
+                                <option value="chainlink">Chainlink (LINK)</option>
+                                <option value="avalanche">Avalanche (AVAX)</option>
+                            </select>
+                        </div>
+
+                        <!-- Investment Amount -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Investment Amount ($)</label>
+                            <input type="number" id="investmentAmount" placeholder="10000" 
+                                   class="w-full px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                        </div>
+
+                        <!-- Buy Price -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Buy Price ($)</label>
+                            <input type="number" id="buyPrice" placeholder="50000" step="0.01"
+                                   class="w-full px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                        </div>
+
+                        <!-- Current/Sell Price -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Current/Sell Price ($)</label>
+                            <div class="flex space-x-2">
+                                <input type="number" id="sellPrice" placeholder="65000" step="0.01"
+                                       class="flex-1 px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                                <button onclick="fetchCurrentPrice()" class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg transition">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">Click sync to get current market price</p>
+                        </div>
+
+                        <!-- Calculate Button -->
+                        <button onclick="calculateProfit()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-6 rounded-lg transition text-lg">
+                            <i class="fas fa-calculator mr-2"></i>Calculate Profit/Loss
+                        </button>
+                    </div>
+
+                    <!-- Results -->
+                    <div class="space-y-6">
+                        <h3 class="text-xl font-semibold mb-4">Calculation Results</h3>
+                        
+                        <div id="calculationResults" class="space-y-4 hidden">
+                            <!-- Total Profit/Loss -->
+                            <div class="result-card rounded-lg p-6 text-center" id="profitLossCard">
+                                <h4 class="text-lg font-semibold mb-2">Total Profit/Loss</h4>
+                                <div class="text-3xl font-bold mb-2" id="totalProfitLoss">+$15,000</div>
+                                <div class="text-lg" id="profitLossPercent">+30.0%</div>
+                            </div>
+
+                            <!-- Investment Summary -->
+                            <div class="bg-gray-800 rounded-lg p-4 space-y-3">
+                                <div class="flex justify-between">
+                                    <span>Cryptocurrency:</span>
+                                    <span id="resultCrypto" class="font-semibold">Bitcoin</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Investment Amount:</span>
+                                    <span id="resultInvestment" class="font-semibold">$50,000</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Coins Purchased:</span>
+                                    <span id="resultCoins" class="font-semibold">1.0 BTC</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Buy Price:</span>
+                                    <span id="resultBuyPrice" class="font-semibold">$50,000</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Current Value:</span>
+                                    <span id="resultCurrentValue" class="font-semibold">$65,000</span>
+                                </div>
+                            </div>
+
+                            <!-- Tax Information -->
+                            <div class="bg-gray-800 rounded-lg p-4">
+                                <h5 class="font-semibold mb-2">Tax Considerations (US)</h5>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span>Short-term Gains (>1 year):</span>
+                                        <span id="shortTermTax" class="text-red-400">$5,250 (35%)</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Long-term Gains (<1 year):</span>
+                                        <span id="longTermTax" class="text-green-400">$3,000 (20%)</span>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-2">*Tax rates are estimates. Consult a tax professional.</p>
+                            </div>
+                        </div>
+
+                        <!-- Placeholder when no calculation -->
+                        <div id="calculationPlaceholder" class="text-center py-12 text-gray-400">
+                            <div class="text-6xl mb-4">📊</div>
+                            <p>Enter your investment details and click calculate to see your crypto profit/loss results.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portfolio Tracker -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <div class="calculator-card rounded-2xl p-8">
+                <h2 class="text-2xl font-bold mb-6">Portfolio Profit Tracker</h2>
+                <p class="text-gray-400 mb-6">Track multiple cryptocurrency investments in one place</p>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="text-left py-3">Crypto</th>
+                                <th class="text-center py-3">Amount</th>
+                                <th class="text-center py-3">Buy Price</th>
+                                <th class="text-center py-3">Current Price</th>
+                                <th class="text-center py-3">P&L</th>
+                                <th class="text-center py-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="portfolioTable">
+                            <tr>
+                                <td colspan="6" class="text-center py-8 text-gray-400">
+                                    <div class="text-4xl mb-2">📈</div>
+                                    <p>No portfolio entries yet. Use the calculator above to add investments.</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <button onclick="addToPortfolio()" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                    <i class="fas fa-plus mr-2"></i>Add Current Calculation to Portfolio
+                </button>
+            </div>
+        </div>
+
+        <!-- Calculator Features -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8 text-center">Why Use Our Crypto Profit Calculator?</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-4xl mb-4">🎯</div>
+                    <h3 class="text-xl font-bold mb-3">Accurate Calculations</h3>
+                    <p class="text-gray-400">Real-time cryptocurrency prices ensure your profit/loss calculations are always accurate and up-to-date.</p>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-4xl mb-4">💼</div>
+                    <h3 class="text-xl font-bold mb-3">Portfolio Tracking</h3>
+                    <p class="text-gray-400">Track multiple cryptocurrency investments and see your total portfolio performance at a glance.</p>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-4xl mb-4">📊</div>
+                    <h3 class="text-xl font-bold mb-3">Tax Planning</h3>
+                    <p class="text-gray-400">Get estimates for short-term and long-term capital gains taxes to help with your tax planning.</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Popular Calculations -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8 text-center">Popular Crypto Profit Calculations</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">📈 Bitcoin Profit Examples</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span>$10K invested at $30K → $95K:</span>
+                            <span class="text-green-400 font-bold">+$21,667 (217%)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>$5K invested at $60K → $95K:</span>
+                            <span class="text-green-400 font-bold">+$2,917 (58%)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>$1K invested at $108K → $95K:</span>
+                            <span class="text-red-400 font-bold">-$120 (-12%)</span>
+                        </div>
+                    </div>
+                    <button onclick="loadExample('bitcoin', 10000, 30000, 95000)" class="mt-4 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm">
+                        Try Bitcoin Example
+                    </button>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">⚡ Ethereum Profit Examples</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span>$5K invested at $1.5K → $3.2K:</span>
+                            <span class="text-green-400 font-bold">+$5,667 (113%)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>$2K invested at $2.5K → $3.2K:</span>
+                            <span class="text-green-400 font-bold">+$560 (28%)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>$3K invested at $4K → $3.2K:</span>
+                            <span class="text-red-400 font-bold">-$600 (-20%)</span>
+                        </div>
+                    </div>
+                    <button onclick="loadExample('ethereum', 5000, 1500, 3200)" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">
+                        Try Ethereum Example
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="max-w-4xl mx-auto text-center bg-gradient-to-r from-purple-900 to-green-900 rounded-2xl p-8">
+            <h2 class="text-3xl font-bold mb-4">Track All Your Crypto Investments</h2>
+            <p class="text-gray-300 mb-6 max-w-2xl mx-auto">
+                Want to track your entire crypto portfolio automatically? Upgrade to our premium tools for real-time portfolio tracking, advanced analytics, and tax reporting.
+            </p>
+            <div class="flex flex-col md:flex-row gap-4 justify-center">
+                <a href="/pricing" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                    Upgrade to Premium
+                </a>
+                <a href="/converter" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                    Try Crypto Converter
+                </a>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 py-8 border-t border-gray-800">
+        <div class="container mx-auto px-4 text-center text-gray-500">
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6 mb-4">
+                <a href="/" class="hover:text-white text-sm">Home</a>
+                <a href="/profit-calculator" class="hover:text-white text-sm text-purple-400">💰 Profit Calculator</a>
+                <a href="/converter" class="hover:text-white text-sm">🔄 Converter</a>
+                <a href="/bitcoin" class="hover:text-white text-sm">₿ Bitcoin</a>
+                <a href="/ethereum" class="hover:text-white text-sm">Ξ Ethereum</a>
+            </div>
+            <p class="text-xs md:text-sm px-4">© 2025 IsThisTheDip.xyz | Free cryptocurrency profit calculator and portfolio tools</p>
+        </div>
+    </footer>
+
+    <script>
+        // Portfolio storage
+        let portfolio = JSON.parse(localStorage.getItem('cryptoPortfolio')) || [];
+
+        // Cryptocurrency data
+        const cryptoData = {
+            bitcoin: { name: 'Bitcoin', symbol: 'BTC', price: 95847 },
+            ethereum: { name: 'Ethereum', symbol: 'ETH', price: 3247 },
+            solana: { name: 'Solana', symbol: 'SOL', price: 189 },
+            cardano: { name: 'Cardano', symbol: 'ADA', price: 0.87 },
+            dogecoin: { name: 'Dogecoin', symbol: 'DOGE', price: 0.32 },
+            polygon: { name: 'Polygon', symbol: 'MATIC', price: 1.05 },
+            chainlink: { name: 'Chainlink', symbol: 'LINK', price: 22.45 },
+            avalanche: { name: 'Avalanche', symbol: 'AVAX', price: 38.92 }
+        };
+
+        // Calculate profit/loss
+        function calculateProfit() {
+            const crypto = document.getElementById('cryptoSelect').value;
+            const investment = parseFloat(document.getElementById('investmentAmount').value);
+            const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+            const sellPrice = parseFloat(document.getElementById('sellPrice').value);
+
+            if (!investment || !buyPrice || !sellPrice) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            // Calculations
+            const coinsPurchased = investment / buyPrice;
+            const currentValue = coinsPurchased * sellPrice;
+            const profitLoss = currentValue - investment;
+            const profitLossPercent = ((profitLoss / investment) * 100);
+
+            // Update results
+            document.getElementById('calculationResults').classList.remove('hidden');
+            document.getElementById('calculationPlaceholder').classList.add('hidden');
+
+            // Profit/Loss display
+            const profitLossCard = document.getElementById('profitLossCard');
+            const totalProfitLoss = document.getElementById('totalProfitLoss');
+            const profitLossPercentEl = document.getElementById('profitLossPercent');
+
+            if (profitLoss >= 0) {
+                profitLossCard.className = 'result-card rounded-lg p-6 text-center profit-positive';
+                totalProfitLoss.textContent = `+$${profitLoss.toLocaleString()}`;
+                profitLossPercentEl.textContent = `+${profitLossPercent.toFixed(2)}%`;
+            } else {
+                profitLossCard.className = 'result-card rounded-lg p-6 text-center profit-negative';
+                totalProfitLoss.textContent = `-$${Math.abs(profitLoss).toLocaleString()}`;
+                profitLossPercentEl.textContent = `${profitLossPercent.toFixed(2)}%`;
+            }
+
+            // Investment summary
+            document.getElementById('resultCrypto').textContent = cryptoData[crypto].name;
+            document.getElementById('resultInvestment').textContent = `$${investment.toLocaleString()}`;
+            document.getElementById('resultCoins').textContent = `${coinsPurchased.toFixed(6)} ${cryptoData[crypto].symbol}`;
+            document.getElementById('resultBuyPrice').textContent = `$${buyPrice.toLocaleString()}`;
+            document.getElementById('resultCurrentValue').textContent = `$${currentValue.toLocaleString()}`;
+
+            // Tax calculations (simplified US rates)
+            const shortTermTax = profitLoss * 0.35; // 35% short-term
+            const longTermTax = profitLoss * 0.20;  // 20% long-term
+
+            document.getElementById('shortTermTax').textContent = profitLoss > 0 ? 
+                `$${shortTermTax.toLocaleString()} (35%)` : '$0 (No tax on losses)';
+            document.getElementById('longTermTax').textContent = profitLoss > 0 ? 
+                `$${longTermTax.toLocaleString()} (20%)` : '$0 (No tax on losses)';
+        }
+
+        // Fetch current price
+        function fetchCurrentPrice() {
+            const crypto = document.getElementById('cryptoSelect').value;
+            const currentPrice = cryptoData[crypto].price;
+            document.getElementById('sellPrice').value = currentPrice;
+            
+            // Show notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50';
+            notification.textContent = `Updated to current ${cryptoData[crypto].name} price: $${currentPrice.toLocaleString()}`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Load example calculation
+        function loadExample(crypto, investment, buyPrice, sellPrice) {
+            document.getElementById('cryptoSelect').value = crypto;
+            document.getElementById('investmentAmount').value = investment;
+            document.getElementById('buyPrice').value = buyPrice;
+            document.getElementById('sellPrice').value = sellPrice;
+            calculateProfit();
+        }
+
+        // Add to portfolio
+        function addToPortfolio() {
+            const crypto = document.getElementById('cryptoSelect').value;
+            const investment = parseFloat(document.getElementById('investmentAmount').value);
+            const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+            const sellPrice = parseFloat(document.getElementById('sellPrice').value);
+
+            if (!investment || !buyPrice || !sellPrice) {
+                alert('Please calculate profit/loss first');
+                return;
+            }
+
+            const portfolioItem = {
+                id: Date.now(),
+                crypto: crypto,
+                name: cryptoData[crypto].name,
+                symbol: cryptoData[crypto].symbol,
+                investment: investment,
+                buyPrice: buyPrice,
+                currentPrice: sellPrice,
+                coins: investment / buyPrice,
+                date: new Date().toLocaleDateString()
+            };
+
+            portfolio.push(portfolioItem);
+            localStorage.setItem('cryptoPortfolio', JSON.stringify(portfolio));
+            updatePortfolioTable();
+
+            // Show success message
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50';
+            notification.textContent = 'Added to portfolio successfully!';
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Update portfolio table
+        function updatePortfolioTable() {
+            const tbody = document.getElementById('portfolioTable');
+            
+            if (portfolio.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-8 text-gray-400">
+                            <div class="text-4xl mb-2">📈</div>
+                            <p>No portfolio entries yet. Use the calculator above to add investments.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = portfolio.map(item => {
+                const currentValue = item.coins * item.currentPrice;
+                const profitLoss = currentValue - item.investment;
+                const profitLossPercent = ((profitLoss / item.investment) * 100);
+                const profitClass = profitLoss >= 0 ? 'text-green-400' : 'text-red-400';
+                const profitSign = profitLoss >= 0 ? '+' : '';
+
+                return `
+                    <tr class="border-b border-gray-700">
+                        <td class="py-3">
+                            <div class="font-semibold">${item.name}</div>
+                            <div class="text-sm text-gray-400">${item.symbol}</div>
+                        </td>
+                        <td class="text-center py-3">${item.coins.toFixed(4)}</td>
+                        <td class="text-center py-3">$${item.buyPrice.toLocaleString()}</td>
+                        <td class="text-center py-3">$${item.currentPrice.toLocaleString()}</td>
+                        <td class="text-center py-3 ${profitClass}">
+                            <div>${profitSign}$${Math.abs(profitLoss).toLocaleString()}</div>
+                            <div class="text-sm">${profitSign}${profitLossPercent.toFixed(2)}%</div>
+                        </td>
+                        <td class="text-center py-3">
+                            <button onclick="removeFromPortfolio(${item.id})" class="text-red-400 hover:text-red-300">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Remove from portfolio
+        function removeFromPortfolio(id) {
+            portfolio = portfolio.filter(item => item.id !== id);
+            localStorage.setItem('cryptoPortfolio', JSON.stringify(portfolio));
+            updatePortfolioTable();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePortfolioTable();
+            
+            // Auto-fill current price when crypto is selected
+            document.getElementById('cryptoSelect').addEventListener('change', (e) => {
+                const crypto = e.target.value;
+                document.getElementById('sellPrice').value = cryptoData[crypto].price;
+            });
+            
+            // Set initial current price
+            document.getElementById('sellPrice').value = cryptoData.bitcoin.price;
+        });
+    </script>
+</body>
+
+</html>

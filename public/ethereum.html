@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethereum Price Analysis - Is This The Dip? | Live ETH Dip Calculator</title>
+    <meta name="description" content="Real-time Ethereum price analysis and dip detection. Get instant BUY/WAIT signals for Ethereum (ETH) with AI-powered smart contract and DeFi market analysis.">
+    <meta property="og:title" content="Ethereum Price Analysis - Live ETH Dip Calculator">
+    <meta property="og:description" content="Analyze Ethereum price drops in real-time. Get AI-powered BUY/WAIT signals for Ethereum investments with DeFi analysis and smart contract metrics.">
+    <meta property="og:url" content="https://isthisthedip.xyz/ethereum">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="IsThisTheDip.xyz">
+    <link rel="canonical" href="https://isthisthedip.xyz/ethereum">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Ethereum Price Analysis - Live ETH Dip Calculator",
+        "description": "Real-time Ethereum price analysis with AI-powered dip detection, DeFi metrics, and BUY/WAIT signals for smart Ethereum investment decisions.",
+        "url": "https://isthisthedip.xyz/ethereum",
+        "mainEntity": {
+            "@type": "CryptoCurrency",
+            "name": "Ethereum",
+            "alternateName": "ETH",
+            "description": "Ethereum is a decentralized blockchain platform that enables smart contracts and decentralized applications (DApps).",
+            "sameAs": [
+                "https://ethereum.org",
+                "https://en.wikipedia.org/wiki/Ethereum"
+            ]
+        },
+        "provider": {
+            "@type": "Organization",
+            "name": "IsThisTheDip.xyz",
+            "url": "https://isthisthedip.xyz"
+        },
+        "about": [
+            {
+                "@type": "Thing",
+                "name": "Ethereum Investment"
+            },
+            {
+                "@type": "Thing",
+                "name": "Ethereum Price Analysis"
+            },
+            {
+                "@type": "Thing",
+                "name": "DeFi Analysis"
+            },
+            {
+                "@type": "Thing",
+                "name": "Smart Contract Platform"
+            }
+        ]
+    }
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #627eea 0%, #8a92b2 100%);
+        }
+        .ethereum-gradient {
+            background: linear-gradient(135deg, #627eea 0%, #7c3aed 100%);
+        }
+        .pulse-ethereum {
+            animation: pulse-ethereum 2s infinite;
+        }
+        @keyframes pulse-ethereum {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="hidden md:flex justify-between items-center">
+                <div class="flex items-center space-x-6">
+                    <a href="/" class="text-2xl font-bold flex items-center hover:opacity-80 transition-opacity">
+                        <span class="mr-2">Ξ</span> Ethereum Analysis
+                    </a>
+                    <nav class="flex items-center space-x-4">
+                        <a href="/" class="text-sm hover:text-purple-200 transition-colors">Home</a>
+                        <a href="/bitcoin" class="text-sm hover:text-purple-200 transition-colors">₿ Bitcoin</a>
+                        <a href="/ethereum" class="text-sm text-purple-200">Ξ Ethereum</a>
+                        <a href="/leaderboard" class="text-sm hover:text-purple-200 transition-colors">🏆 Rankings</a>
+                        <a href="/blog" class="text-sm hover:text-purple-200 transition-colors">📝 Analysis</a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Hero Section -->
+        <div class="text-center mb-12">
+            <div class="flex items-center justify-center mb-4">
+                <span class="text-6xl mr-4">Ξ</span>
+                <div>
+                    <h1 class="text-4xl md:text-5xl font-bold mb-2">Ethereum Price Analysis</h1>
+                    <p class="text-xl text-gray-400">Real-time ETH dip detection with DeFi ecosystem insights</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Ethereum Data -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <div class="ethereum-gradient rounded-2xl p-8 text-center mb-8">
+                <h2 class="text-3xl font-bold mb-4 text-white">Live Ethereum Price</h2>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div>
+                        <div class="text-4xl font-bold text-white mb-2" id="eth-price">$3,247</div>
+                        <div class="text-white opacity-75">Current Price</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-red-300 mb-2" id="eth-change">-3.1%</div>
+                        <div class="text-white opacity-75">24h Change</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-2" id="eth-score">65/100</div>
+                        <div class="text-white opacity-75">Dip Score</div>
+                    </div>
+                </div>
+                <button onclick="analyzeEthereum()" class="mt-6 bg-white hover:bg-gray-100 text-purple-700 font-bold py-4 px-8 rounded-lg transition pulse-ethereum">
+                    <i class="fas fa-chart-line mr-2"></i>Analyze Ethereum Now
+                </button>
+            </div>
+        </div>
+
+        <!-- Ethereum Analysis Results -->
+        <div id="ethereum-results" class="max-w-4xl mx-auto mb-12 hidden">
+            <div class="bg-gray-800 rounded-2xl p-8">
+                <h3 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="text-3xl mr-3">Ξ</span>
+                    Ethereum Investment Analysis
+                </h3>
+                
+                <!-- Signal Display -->
+                <div id="eth-signal" class="text-center py-8 mb-6 rounded-lg bg-yellow-600">
+                    <div class="text-4xl font-bold mb-2 text-black">MODERATE BUY</div>
+                    <div class="text-lg opacity-90 text-black">Ethereum shows mixed signals - consider DCA approach</div>
+                </div>
+
+                <!-- Technical Indicators -->
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="font-bold mb-3">Technical Analysis</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span>RSI (14):</span>
+                                <span class="text-yellow-400">45.2 (Neutral)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>MACD:</span>
+                                <span class="text-yellow-400">Neutral</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Support Level:</span>
+                                <span>$3,180</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Resistance:</span>
+                                <span>$3,450</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="font-bold mb-3">DeFi Ecosystem Health</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span>TVL (Total Value Locked):</span>
+                                <span class="text-green-400">$85.2B</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Gas Fees:</span>
+                                <span class="text-green-400">Low (15 gwei)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Network Activity:</span>
+                                <span class="text-yellow-400">Moderate</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Staking Yield:</span>
+                                <span class="text-green-400">3.2% APR</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price Chart -->
+                <div class="mb-6">
+                    <h4 class="font-bold mb-3">Ethereum Price Chart (7 Days)</h4>
+                    <div class="bg-gray-900 rounded-lg p-4 h-64">
+                        <canvas id="ethChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ethereum Education -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8">Understanding Ethereum Investment</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">🔮 What is Ethereum?</h3>
+                    <p class="text-gray-300 mb-4">
+                        Ethereum is a decentralized blockchain platform that enables smart contracts and decentralized applications (DApps). As the foundation for most DeFi protocols, NFTs, and Web3 applications, Ethereum is the world's second-largest cryptocurrency.
+                    </p>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li>• Programmable blockchain with smart contracts</li>
+                        <li>• Foundation of the DeFi ecosystem</li>
+                        <li>• Proof-of-Stake consensus (energy efficient)</li>
+                        <li>• Layer 2 scaling solutions expanding rapidly</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">💼 Ethereum Investment Factors</h3>
+                    <p class="text-gray-300 mb-4">
+                        Ethereum's value is driven by network utility, DeFi growth, and institutional adoption. Our analysis considers both price action and fundamental blockchain metrics for comprehensive investment signals.
+                    </p>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li>• DeFi Total Value Locked (TVL) growth</li>
+                        <li>• Network usage and gas fee trends</li>
+                        <li>• Ethereum 2.0 staking participation</li>
+                        <li>• Layer 2 adoption and scaling progress</li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- DeFi Ecosystem Stats -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8">Ethereum DeFi Ecosystem</h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-3xl mb-3">🏦</div>
+                    <h4 class="font-bold mb-2">Total Value Locked</h4>
+                    <div class="text-2xl font-bold text-green-400 mb-2">$85.2B</div>
+                    <p class="text-sm text-gray-400">Assets locked in Ethereum DeFi protocols</p>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-3xl mb-3">⛽</div>
+                    <h4 class="font-bold mb-2">Average Gas Price</h4>
+                    <div class="text-2xl font-bold text-green-400 mb-2">15 gwei</div>
+                    <p class="text-sm text-gray-400">Low fees = higher network utility</p>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-3xl mb-3">🔒</div>
+                    <h4 class="font-bold mb-2">ETH Staked</h4>
+                    <div class="text-2xl font-bold text-purple-400 mb-2">34.8M ETH</div>
+                    <p class="text-sm text-gray-400">28% of supply staked for 3.2% yield</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Ethereum vs Other Cryptos -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8">Compare Ethereum with Other Cryptocurrencies</h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                
+                <a href="/bitcoin" class="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition">
+                    <div class="flex items-center mb-4">
+                        <span class="text-3xl mr-3">₿</span>
+                        <div>
+                            <h4 class="font-bold">Bitcoin</h4>
+                            <p class="text-sm text-gray-400">Digital gold</p>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-300">
+                        Compare Ethereum vs Bitcoin for portfolio allocation and investment strategy.
+                    </div>
+                </a>
+
+                <a href="/solana" class="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition">
+                    <div class="flex items-center mb-4">
+                        <span class="text-3xl mr-3">◎</span>
+                        <div>
+                            <h4 class="font-bold">Solana</h4>
+                            <p class="text-sm text-gray-400">Ethereum competitor</p>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-300">
+                        Analyze Solana vs Ethereum for smart contract platform investments.
+                    </div>
+                </a>
+
+                <a href="/leaderboard" class="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition">
+                    <div class="flex items-center mb-4">
+                        <span class="text-3xl mr-3">📊</span>
+                        <div>
+                            <h4 class="font-bold">All DeFi Tokens</h4>
+                            <p class="text-sm text-gray-400">Ecosystem rankings</p>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-300">
+                        See how Ethereum-based DeFi tokens are performing today.
+                    </div>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- Ethereum News & Analysis -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8">Latest Ethereum Analysis & News</h2>
+            <div class="space-y-6">
+                
+                <article class="bg-gray-800 rounded-lg p-6">
+                    <div class="flex items-center mb-3">
+                        <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm mr-3">DeFi Analysis</span>
+                        <span class="text-gray-400 text-sm">January 2, 2025</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Ethereum Layer 2 Solutions Drive 2025 Growth</h3>
+                    <p class="text-gray-300 mb-4">
+                        Arbitrum, Optimism, and Polygon continue scaling Ethereum with over $12B in combined TVL. Lower gas fees and faster transactions are driving mainstream DeFi adoption across Layer 2 networks.
+                    </p>
+                    <a href="/blog/ethereum-layer2-growth-2025" class="text-purple-400 hover:text-purple-300 text-sm">Read Analysis →</a>
+                </article>
+
+                <article class="bg-gray-800 rounded-lg p-6">
+                    <div class="flex items-center mb-3">
+                        <span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm mr-3">Staking Update</span>
+                        <span class="text-gray-400 text-sm">January 1, 2025</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Ethereum Staking Yields Stabilize at 3.2% APR</h3>
+                    <p class="text-gray-300 mb-4">
+                        With 34.8 million ETH now staked (28% of total supply), Ethereum's Proof-of-Stake network shows strong validator participation and consistent rewards for long-term holders.
+                    </p>
+                    <a href="/blog/ethereum-staking-yields-2025" class="text-purple-400 hover:text-purple-300 text-sm">Learn More →</a>
+                </article>
+
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="max-w-4xl mx-auto text-center bg-gradient-to-r from-purple-900 to-indigo-900 rounded-2xl p-8">
+            <h2 class="text-3xl font-bold mb-4">Stay Ahead of Ethereum Market Moves</h2>
+            <p class="text-gray-300 mb-6 max-w-2xl mx-auto">
+                Get real-time Ethereum analysis, DeFi insights, and smart contract metrics delivered to your inbox. Join the community of sophisticated ETH investors.
+            </p>
+            <div class="flex flex-col md:flex-row gap-4 max-w-md mx-auto">
+                <input type="email" placeholder="Enter email for ETH insights" 
+                       class="flex-1 px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                <button class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition">
+                    Get ETH Analysis
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 py-8 border-t border-gray-800">
+        <div class="container mx-auto px-4 text-center text-gray-500">
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6 mb-4">
+                <a href="/" class="hover:text-white text-sm">Home</a>
+                <a href="/bitcoin" class="hover:text-white text-sm">₿ Bitcoin</a>
+                <a href="/ethereum" class="hover:text-white text-sm text-purple-400">Ξ Ethereum</a>
+                <a href="/blog" class="hover:text-white text-sm">📝 Blog</a>
+                <a href="/pricing" class="hover:text-white text-sm">Pricing</a>
+            </div>
+            <p class="text-xs md:text-sm px-4">© 2025 IsThisTheDip.xyz | Ethereum price analysis and DeFi insights</p>
+        </div>
+    </footer>
+
+    <!-- Load JavaScript -->
+    <script src="/js/auth.js"></script>
+    <script src="/js/calculator.js"></script>
+    
+    <script>
+        // Ethereum-specific analysis function
+        function analyzeEthereum() {
+            document.getElementById('ethereum-results').classList.remove('hidden');
+            document.getElementById('ethereum-results').scrollIntoView({ behavior: 'smooth' });
+            initializeEthereumChart();
+            
+            if (window.calculator) {
+                window.calculator.analyzeSpecificCrypto('ethereum');
+            }
+        }
+
+        // Initialize Ethereum price chart
+        function initializeEthereumChart() {
+            const ctx = document.getElementById('ethChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Dec 27', 'Dec 28', 'Dec 29', 'Dec 30', 'Dec 31', 'Jan 1', 'Jan 2'],
+                        datasets: [{
+                            label: 'Ethereum Price',
+                            data: [3456, 3387, 3298, 3156, 3089, 3198, 3247],
+                            borderColor: '#627eea',
+                            backgroundColor: 'rgba(98, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: { color: 'white' }
+                            }
+                        },
+                        scales: {
+                            x: { ticks: { color: 'white' } },
+                            y: {
+                                ticks: {
+                                    color: 'white',
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Update Ethereum price data
+        function updateEthereumData() {
+            const priceElement = document.getElementById('eth-price');
+            const changeElement = document.getElementById('eth-change');
+            const scoreElement = document.getElementById('eth-score');
+            
+            if (priceElement) {
+                setInterval(() => {
+                    const basePrice = 3247;
+                    const variation = (Math.random() - 0.5) * 100;
+                    const newPrice = Math.round(basePrice + variation);
+                    priceElement.textContent = '$' + newPrice.toLocaleString();
+                }, 30000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateEthereumData();
+        });
+    </script>
+</body>
+
+</html>

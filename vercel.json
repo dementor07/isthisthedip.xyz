@@ -56,6 +56,26 @@
       "destination": "/resources.html"
     },
     {
+      "source": "/bitcoin",
+      "destination": "/bitcoin.html"
+    },
+    {
+      "source": "/ethereum",
+      "destination": "/ethereum.html"
+    },
+    {
+      "source": "/solana",
+      "destination": "/solana.html"
+    },
+    {
+      "source": "/profit-calculator",
+      "destination": "/profit-calculator.html"
+    },
+    {
+      "source": "/converter",
+      "destination": "/converter.html"
+    },
+    {
       "source": "/js/(.*)",
       "destination": "/js/$1"
     },

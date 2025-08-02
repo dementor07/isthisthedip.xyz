@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Price Analysis - Is This The Dip? | Live SOL Dip Calculator</title>
+    <meta name="description" content="Real-time Solana price analysis and dip detection. Get instant BUY/WAIT signals for Solana (SOL) with high-speed blockchain metrics and ecosystem analysis.">
+    <meta property="og:title" content="Solana Price Analysis - Live SOL Dip Calculator">
+    <meta property="og:description" content="Analyze Solana price drops with AI-powered analysis. Get BUY/WAIT signals for SOL investments with network performance and ecosystem health metrics.">
+    <meta property="og:url" content="https://isthisthedip.xyz/solana">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="IsThisTheDip.xyz">
+    <link rel="canonical" href="https://isthisthedip.xyz/solana">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Solana Price Analysis - Live SOL Dip Calculator",
+        "description": "Real-time Solana price analysis with AI-powered dip detection, network performance metrics, and ecosystem health for smart SOL investment decisions.",
+        "url": "https://isthisthedip.xyz/solana",
+        "mainEntity": {
+            "@type": "CryptoCurrency",
+            "name": "Solana",
+            "alternateName": "SOL",
+            "description": "Solana is a high-performance blockchain platform designed for decentralized applications and crypto projects with ultra-fast transactions.",
+            "sameAs": [
+                "https://solana.com",
+                "https://en.wikipedia.org/wiki/Solana_(blockchain_platform)"
+            ]
+        }
+    }
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #9945ff 0%, #14f195 100%);
+        }
+        .solana-gradient {
+            background: linear-gradient(135deg, #9945ff 0%, #14f195 100%);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="hidden md:flex justify-between items-center">
+                <div class="flex items-center space-x-6">
+                    <a href="/" class="text-2xl font-bold flex items-center hover:opacity-80 transition-opacity">
+                        <span class="mr-2">◎</span> Solana Analysis
+                    </a>
+                    <nav class="flex items-center space-x-4">
+                        <a href="/" class="text-sm hover:text-green-200 transition-colors">Home</a>
+                        <a href="/bitcoin" class="text-sm hover:text-green-200 transition-colors">₿ Bitcoin</a>
+                        <a href="/ethereum" class="text-sm hover:text-green-200 transition-colors">Ξ Ethereum</a>
+                        <a href="/solana" class="text-sm text-green-200">◎ Solana</a>
+                        <a href="/leaderboard" class="text-sm hover:text-green-200 transition-colors">🏆 Rankings</a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Hero Section -->
+        <div class="text-center mb-12">
+            <div class="flex items-center justify-center mb-4">
+                <span class="text-6xl mr-4">◎</span>
+                <div>
+                    <h1 class="text-4xl md:text-5xl font-bold mb-2">Solana Price Analysis</h1>
+                    <p class="text-xl text-gray-400">High-speed blockchain with ultra-fast transaction analysis</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Solana Data -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <div class="solana-gradient rounded-2xl p-8 text-center mb-8">
+                <h2 class="text-3xl font-bold mb-4 text-black">Live Solana Price</h2>
+                <div class="grid md:grid-cols-4 gap-6">
+                    <div>
+                        <div class="text-4xl font-bold text-black mb-2" id="sol-price">$189.42</div>
+                        <div class="text-black opacity-75">Current Price</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-green-900 mb-2" id="sol-change">+1.8%</div>
+                        <div class="text-black opacity-75">24h Change</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-black mb-2" id="sol-score">72/100</div>
+                        <div class="text-black opacity-75">Dip Score</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-black mb-2" id="sol-tps">3,847</div>
+                        <div class="text-black opacity-75">TPS</div>
+                    </div>
+                </div>
+                <button onclick="analyzeSolana()" class="mt-6 bg-black hover:bg-gray-800 text-white font-bold py-4 px-8 rounded-lg transition">
+                    <i class="fas fa-rocket mr-2"></i>Analyze Solana Now
+                </button>
+            </div>
+        </div>
+
+        <!-- Network Performance -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8">Solana Network Performance</h2>
+            <div class="grid md:grid-cols-4 gap-6">
+                
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-3xl mb-3">⚡</div>
+                    <h4 class="font-bold mb-2">Transaction Speed</h4>
+                    <div class="text-2xl font-bold text-green-400 mb-2">3,847 TPS</div>
+                    <p class="text-sm text-gray-400">Transactions per second</p>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-3xl mb-3">💰</div>
+                    <h4 class="font-bold mb-2">Transaction Cost</h4>
+                    <div class="text-2xl font-bold text-green-400 mb-2">$0.00025</div>
+                    <p class="text-sm text-gray-400">Average fee per transaction</p>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-3xl mb-3">🏗️</div>
+                    <h4 class="font-bold mb-2">Active Validators</h4>
+                    <div class="text-2xl font-bold text-purple-400 mb-2">1,847</div>
+                    <p class="text-sm text-gray-400">Network decentralization</p>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <div class="text-3xl mb-3">📱</div>
+                    <h4 class="font-bold mb-2">Daily Active Users</h4>
+                    <div class="text-2xl font-bold text-blue-400 mb-2">2.1M</div>
+                    <p class="text-sm text-gray-400">Ecosystem adoption</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Solana vs Competitors -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8">Solana vs Other Smart Contract Platforms</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full bg-gray-800 rounded-lg">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left p-4">Platform</th>
+                            <th class="text-center p-4">TPS</th>
+                            <th class="text-center p-4">Avg Fee</th>
+                            <th class="text-center p-4">Market Cap</th>
+                            <th class="text-center p-4">Dip Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-700 bg-purple-900 bg-opacity-30">
+                            <td class="p-4 font-bold">◎ Solana</td>
+                            <td class="text-center p-4 text-green-400">3,847</td>
+                            <td class="text-center p-4 text-green-400">$0.00025</td>
+                            <td class="text-center p-4">$89.2B</td>
+                            <td class="text-center p-4 text-green-400">72/100</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-4">Ξ Ethereum</td>
+                            <td class="text-center p-4">15</td>
+                            <td class="text-center p-4">$2.50</td>
+                            <td class="text-center p-4">$391.8B</td>
+                            <td class="text-center p-4 text-yellow-400">65/100</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-4">🔺 Avalanche</td>
+                            <td class="text-center p-4">4,500</td>
+                            <td class="text-center p-4">$0.15</td>
+                            <td class="text-center p-4">$18.9B</td>
+                            <td class="text-center p-4 text-yellow-400">58/100</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4">⚪ Polygon</td>
+                            <td class="text-center p-4">7,000</td>
+                            <td class="text-center p-4">$0.01</td>
+                            <td class="text-center p-4">$8.7B</td>
+                            <td class="text-center p-4 text-red-400">45/100</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Solana Analysis Results -->
+        <div id="solana-results" class="max-w-4xl mx-auto mb-12 hidden">
+            <div class="bg-gray-800 rounded-2xl p-8">
+                <h3 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="text-3xl mr-3">◎</span>
+                    Solana Investment Analysis
+                </h3>
+                
+                <div id="sol-signal" class="text-center py-8 mb-6 rounded-lg bg-green-600">
+                    <div class="text-4xl font-bold mb-2">BUY SIGNAL</div>
+                    <div class="text-lg opacity-90">Solana shows strong fundamentals and technical momentum</div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="font-bold mb-3">Technical Indicators</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span>RSI (14):</span>
+                                <span class="text-green-400">62.8 (Bullish)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Network Health:</span>
+                                <span class="text-green-400">Excellent</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Ecosystem Growth:</span>
+                                <span class="text-green-400">Strong</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="font-bold mb-3">Ecosystem Metrics</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span>TVL Growth:</span>
+                                <span class="text-green-400">+15% (30d)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Developer Activity:</span>
+                                <span class="text-green-400">High</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>NFT Volume:</span>
+                                <span class="text-purple-400">$2.1M (24h)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="max-w-4xl mx-auto text-center bg-gradient-to-r from-purple-900 to-green-900 rounded-2xl p-8">
+            <h2 class="text-3xl font-bold mb-4">Track Solana's High-Speed Growth</h2>
+            <p class="text-gray-300 mb-6 max-w-2xl mx-auto">
+                Stay updated on Solana's ecosystem development, network performance, and price movements. Get the fastest crypto analysis for the fastest blockchain.
+            </p>
+            <button class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                Get SOL Analysis
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 py-8 border-t border-gray-800">
+        <div class="container mx-auto px-4 text-center text-gray-500">
+            <p class="text-xs md:text-sm px-4">© 2025 IsThisTheDip.xyz | Solana price analysis and ecosystem insights</p>
+        </div>
+    </footer>
+
+    <script>
+        function analyzeSolana() {
+            document.getElementById('solana-results').classList.remove('hidden');
+            document.getElementById('solana-results').scrollIntoView({ behavior: 'smooth' });
+            
+            if (window.calculator) {
+                window.calculator.analyzeSpecificCrypto('solana');
+            }
+        }
+    </script>
+</body>
+
+</html>

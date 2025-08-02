@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Price Analysis - Is This The Dip? | Live BTC Dip Calculator</title>
+    <meta name="description" content="Real-time Bitcoin price analysis and dip detection. Get instant BUY/WAIT signals for Bitcoin (BTC) with AI-powered market analysis and technical indicators.">
+    <meta property="og:title" content="Bitcoin Price Analysis - Live BTC Dip Calculator">
+    <meta property="og:description" content="Analyze Bitcoin price drops in real-time. Get AI-powered BUY/WAIT signals for Bitcoin investments with technical analysis and market sentiment data.">
+    <meta property="og:url" content="https://isthisthedip.xyz/bitcoin">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="IsThisTheDip.xyz">
+    <link rel="canonical" href="https://isthisthedip.xyz/bitcoin">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Bitcoin Price Analysis - Live BTC Dip Calculator",
+        "description": "Real-time Bitcoin price analysis with AI-powered dip detection and BUY/WAIT signals for informed Bitcoin investment decisions.",
+        "url": "https://isthisthedip.xyz/bitcoin",
+        "mainEntity": {
+            "@type": "CryptoCurrency",
+            "name": "Bitcoin",
+            "alternateName": "BTC",
+            "description": "Bitcoin is a decentralized digital currency and the world's largest cryptocurrency by market capitalization.",
+            "sameAs": [
+                "https://bitcoin.org",
+                "https://en.wikipedia.org/wiki/Bitcoin"
+            ]
+        },
+        "provider": {
+            "@type": "Organization",
+            "name": "IsThisTheDip.xyz",
+            "url": "https://isthisthedip.xyz"
+        },
+        "about": [
+            {
+                "@type": "Thing",
+                "name": "Bitcoin Investment"
+            },
+            {
+                "@type": "Thing",
+                "name": "Bitcoin Price Analysis"
+            },
+            {
+                "@type": "Thing",
+                "name": "Bitcoin Trading Signals"
+            }
+        ]
+    }
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #f7931a 0%, #ff6b35 100%);
+        }
+        .bitcoin-gradient {
+            background: linear-gradient(135deg, #f7931a 0%, #ffb74d 100%);
+        }
+        .pulse-bitcoin {
+            animation: pulse-bitcoin 2s infinite;
+        }
+        @keyframes pulse-bitcoin {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="hidden md:flex justify-between items-center">
+                <div class="flex items-center space-x-6">
+                    <a href="/" class="text-2xl font-bold flex items-center hover:opacity-80 transition-opacity">
+                        <span class="mr-2">₿</span> Bitcoin Analysis
+                    </a>
+                    <nav class="flex items-center space-x-4">
+                        <a href="/" class="text-sm hover:text-orange-200 transition-colors">Home</a>
+                        <a href="/bitcoin" class="text-sm text-orange-200">₿ Bitcoin</a>
+                        <a href="/ethereum" class="text-sm hover:text-orange-200 transition-colors">Ξ Ethereum</a>
+                        <a href="/leaderboard" class="text-sm hover:text-orange-200 transition-colors">🏆 Rankings</a>
+                        <a href="/blog" class="text-sm hover:text-orange-200 transition-colors">📝 Analysis</a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Hero Section -->
+        <div class="text-center mb-12">
+            <div class="flex items-center justify-center mb-4">
+                <span class="text-6xl mr-4">₿</span>
+                <div>
+                    <h1 class="text-4xl md:text-5xl font-bold mb-2">Bitcoin Price Analysis</h1>
+                    <p class="text-xl text-gray-400">Real-time BTC dip detection and investment signals</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Bitcoin Data -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <div class="bitcoin-gradient rounded-2xl p-8 text-center mb-8">
+                <h2 class="text-3xl font-bold mb-4 text-black">Live Bitcoin Price</h2>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div>
+                        <div class="text-4xl font-bold text-black mb-2" id="btc-price">$95,847</div>
+                        <div class="text-black opacity-75">Current Price</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-red-900 mb-2" id="btc-change">-2.3%</div>
+                        <div class="text-black opacity-75">24h Change</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-black mb-2" id="btc-score">78/100</div>
+                        <div class="text-black opacity-75">Dip Score</div>
+                    </div>
+                </div>
+                <button onclick="analyzeBitcoin()" class="mt-6 bg-black hover:bg-gray-800 text-white font-bold py-4 px-8 rounded-lg transition pulse-bitcoin">
+                    <i class="fas fa-chart-line mr-2"></i>Analyze Bitcoin Now
+                </button>
+            </div>
+        </div>
+
+        <!-- Bitcoin Analysis Results -->
+        <div id="bitcoin-results" class="max-w-4xl mx-auto mb-12 hidden">
+            <div class="bg-gray-800 rounded-2xl p-8">
+                <h3 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="text-3xl mr-3">₿</span>
+                    Bitcoin Investment Analysis
+                </h3>
+                
+                <!-- Signal Display -->
+                <div id="btc-signal" class="text-center py-8 mb-6 rounded-lg bg-green-600">
+                    <div class="text-4xl font-bold mb-2">STRONG BUY</div>
+                    <div class="text-lg opacity-90">Bitcoin is in a profitable dip zone</div>
+                </div>
+
+                <!-- Technical Indicators -->
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="font-bold mb-3">Technical Analysis</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span>RSI (14):</span>
+                                <span class="text-green-400">32.5 (Oversold)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>MACD:</span>
+                                <span class="text-yellow-400">Bullish Divergence</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Support Level:</span>
+                                <span>$94,200</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Resistance:</span>
+                                <span>$108,500</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="font-bold mb-3">Market Sentiment</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span>Fear & Greed:</span>
+                                <span class="text-red-400">23 (Extreme Fear)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Social Volume:</span>
+                                <span class="text-green-400">High</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Whale Activity:</span>
+                                <span class="text-yellow-400">Accumulating</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Confidence:</span>
+                                <span class="text-green-400">High (87%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price Chart Placeholder -->
+                <div class="mb-6">
+                    <h4 class="font-bold mb-3">Bitcoin Price Chart (7 Days)</h4>
+                    <div class="bg-gray-900 rounded-lg p-4 h-64 flex items-center justify-center">
+                        <canvas id="btcChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bitcoin Education -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8">Understanding Bitcoin Investment</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">💡 What is Bitcoin?</h3>
+                    <p class="text-gray-300 mb-4">
+                        Bitcoin (BTC) is the world's first and largest cryptocurrency by market capitalization. Created in 2009 by Satoshi Nakamoto, Bitcoin operates on a decentralized blockchain network that enables peer-to-peer transactions without intermediaries.
+                    </p>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li>• Digital gold with limited supply (21 million coins)</li>
+                        <li>• Store of value and inflation hedge</li>
+                        <li>• Global payment system</li>
+                        <li>• Institutional adoption growing rapidly</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">📈 Bitcoin Investment Strategy</h3>
+                    <p class="text-gray-300 mb-4">
+                        Bitcoin's volatility creates excellent dip-buying opportunities for long-term investors. Our AI analyzes multiple indicators to identify optimal entry points during market corrections.
+                    </p>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li>• Dollar-cost averaging during dips</li>
+                        <li>• Technical analysis for entry timing</li>
+                        <li>• Risk management and position sizing</li>
+                        <li>• Long-term holding strategy (HODL)</li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Bitcoin vs Other Cryptos -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8">Compare Bitcoin with Other Cryptocurrencies</h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                
+                <a href="/ethereum" class="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition">
+                    <div class="flex items-center mb-4">
+                        <span class="text-3xl mr-3">Ξ</span>
+                        <div>
+                            <h4 class="font-bold">Ethereum</h4>
+                            <p class="text-sm text-gray-400">Smart contracts platform</p>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-300">
+                        Compare Bitcoin vs Ethereum investment opportunities and technical analysis.
+                    </div>
+                </a>
+
+                <a href="/solana" class="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition">
+                    <div class="flex items-center mb-4">
+                        <span class="text-3xl mr-3">◎</span>
+                        <div>
+                            <h4 class="font-bold">Solana</h4>
+                            <p class="text-sm text-gray-400">High-speed blockchain</p>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-300">
+                        Analyze Solana's potential vs Bitcoin for portfolio diversification.
+                    </div>
+                </a>
+
+                <a href="/leaderboard" class="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition">
+                    <div class="flex items-center mb-4">
+                        <span class="text-3xl mr-3">🏆</span>
+                        <div>
+                            <h4 class="font-bold">All Cryptos</h4>
+                            <p class="text-sm text-gray-400">Complete rankings</p>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-300">
+                        See how Bitcoin ranks against 500+ cryptocurrencies today.
+                    </div>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- Bitcoin News & Analysis -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <h2 class="text-3xl font-bold mb-8">Latest Bitcoin Analysis & News</h2>
+            <div class="space-y-6">
+                
+                <article class="bg-gray-800 rounded-lg p-6">
+                    <div class="flex items-center mb-3">
+                        <span class="bg-orange-600 text-white px-3 py-1 rounded-full text-sm mr-3">Analysis</span>
+                        <span class="text-gray-400 text-sm">January 2, 2025</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Bitcoin Correction Creates $95K Buying Opportunity</h3>
+                    <p class="text-gray-300 mb-4">
+                        Bitcoin's recent pullback from $108K highs has created an attractive entry point near the $95K support level. Technical indicators suggest this correction is healthy and presents a strategic accumulation opportunity for long-term investors.
+                    </p>
+                    <a href="/blog/bitcoin-95k-buying-opportunity" class="text-orange-400 hover:text-orange-300 text-sm">Read Full Analysis →</a>
+                </article>
+
+                <article class="bg-gray-800 rounded-lg p-6">
+                    <div class="flex items-center mb-3">
+                        <span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm mr-3">News</span>
+                        <span class="text-gray-400 text-sm">January 1, 2025</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Institutional Bitcoin Adoption Accelerates in 2025</h3>
+                    <p class="text-gray-300 mb-4">
+                        Major corporations and governments continue adding Bitcoin to their treasury reserves, with over $2 trillion in institutional money now allocated to Bitcoin investments worldwide.
+                    </p>
+                    <a href="/blog/bitcoin-institutional-adoption-2025" class="text-orange-400 hover:text-orange-300 text-sm">Read More →</a>
+                </article>
+
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="max-w-4xl mx-auto text-center bg-gradient-to-r from-orange-900 to-yellow-900 rounded-2xl p-8">
+            <h2 class="text-3xl font-bold mb-4">Never Miss a Bitcoin Dip Again</h2>
+            <p class="text-gray-300 mb-6 max-w-2xl mx-auto">
+                Get real-time Bitcoin analysis, price alerts, and professional investment insights delivered to your inbox. Join 10,000+ Bitcoin investors making smarter decisions.
+            </p>
+            <div class="flex flex-col md:flex-row gap-4 max-w-md mx-auto">
+                <input type="email" placeholder="Enter your email for Bitcoin alerts" 
+                       class="flex-1 px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                <button class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg transition">
+                    Get Bitcoin Alerts
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 py-8 border-t border-gray-800">
+        <div class="container mx-auto px-4 text-center text-gray-500">
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6 mb-4">
+                <a href="/" class="hover:text-white text-sm">Home</a>
+                <a href="/bitcoin" class="hover:text-white text-sm text-orange-400">₿ Bitcoin</a>
+                <a href="/ethereum" class="hover:text-white text-sm">Ξ Ethereum</a>
+                <a href="/blog" class="hover:text-white text-sm">📝 Blog</a>
+                <a href="/pricing" class="hover:text-white text-sm">Pricing</a>
+            </div>
+            <p class="text-xs md:text-sm px-4">© 2025 IsThisTheDip.xyz | Bitcoin price analysis and investment insights</p>
+        </div>
+    </footer>
+
+    <!-- Load JavaScript -->
+    <script src="/js/auth.js"></script>
+    <script src="/js/calculator.js"></script>
+    
+    <script>
+        // Bitcoin-specific analysis function
+        function analyzeBitcoin() {
+            // Show results section
+            document.getElementById('bitcoin-results').classList.remove('hidden');
+            
+            // Scroll to results
+            document.getElementById('bitcoin-results').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+            
+            // Initialize Bitcoin price chart
+            initializeBitcoinChart();
+            
+            // Trigger main calculator with Bitcoin
+            if (window.calculator) {
+                window.calculator.analyzeSpecificCrypto('bitcoin');
+            }
+        }
+
+        // Initialize Bitcoin price chart
+        function initializeBitcoinChart() {
+            const ctx = document.getElementById('btcChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Dec 27', 'Dec 28', 'Dec 29', 'Dec 30', 'Dec 31', 'Jan 1', 'Jan 2'],
+                        datasets: [{
+                            label: 'Bitcoin Price',
+                            data: [106500, 105200, 103800, 98400, 95800, 96200, 95847],
+                            borderColor: '#f7931a',
+                            backgroundColor: 'rgba(247, 147, 26, 0.1)',
+                            borderWidth: 3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'white'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: 'white'
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    color: 'white',
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Update Bitcoin price data (simulated)
+        function updateBitcoinData() {
+            // This would connect to real API in production
+            const priceElement = document.getElementById('btc-price');
+            const changeElement = document.getElementById('btc-change');
+            const scoreElement = document.getElementById('btc-score');
+            
+            if (priceElement) {
+                // Simulate live price updates
+                setInterval(() => {
+                    const basePrice = 95847;
+                    const variation = (Math.random() - 0.5) * 1000;
+                    const newPrice = Math.round(basePrice + variation);
+                    priceElement.textContent = '$' + newPrice.toLocaleString();
+                }, 30000); // Update every 30 seconds
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateBitcoinData();
+        });
+    </script>
+</body>
+
+</html>
