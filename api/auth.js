@@ -239,6 +239,7 @@ async function handleChatMessages(req, res) {
       take: limitNum,
       select: {
         id: true,
+        userId: true,
         message: true,
         username: true,
         userTier: true,
@@ -252,6 +253,7 @@ async function handleChatMessages(req, res) {
     // Transform data for frontend compatibility
     const formattedMessages = messages.reverse().map(msg => ({
       id: msg.id,
+      userId: msg.userId,
       message: msg.message,
       username: msg.username,
       userTier: msg.userTier,

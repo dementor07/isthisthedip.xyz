@@ -222,9 +222,7 @@
                     // Check if there's a specific user to message from URL
                     const urlParams = new URLSearchParams(window.location.search);
                     const userId = urlParams.get('user');
-                    console.log('🔍 URL userId parameter:', userId);
                     if (userId) {
-                        console.log('🚀 Starting conversation with user ID:', userId);
                         await this.startNewConversation(parseInt(userId));
                     }
                     
@@ -332,7 +330,6 @@
                         if (response.ok) {
                             const data = await response.json();
                             const user = data.user;
-                            console.log('✅ Fetched user profile:', user);
                             this.selectedConversation = {
                                 other_user_id: parseInt(userId),
                                 display_name: user.displayName || user.username || 'User',
@@ -341,7 +338,6 @@
                                 bio: user.bio,
                                 tier: user.tier
                             };
-                            console.log('📝 Created conversation object:', this.selectedConversation);
                         } else {
                             // Fallback to generic data if profile fetch fails
                             this.selectedConversation = {
@@ -376,7 +372,6 @@
                 
                 // Update chat header
                 const displayName = this.selectedConversation.display_name || this.selectedConversation.username || 'Anonymous';
-                console.log('🎯 Setting chat header to:', displayName);
                 document.getElementById('chat-username').textContent = displayName;
                 
                 const avatar = document.getElementById('chat-avatar');
