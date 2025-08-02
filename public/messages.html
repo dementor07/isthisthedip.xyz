@@ -279,22 +279,30 @@
 
             async checkAuth() {
                 try {
+                    console.log('🔐 Checking authentication...');
                     const response = await fetch('/api/auth?action=me', {
                         credentials: 'include'
                     });
                     
+                    console.log('🔐 Auth response status:', response.status);
+                    
                     if (response.ok) {
                         const data = await response.json();
+                        console.log('🔐 Auth data:', data);
+                        
                         if (data.authenticated && data.user) {
                             this.currentUser = data.user;
+                            console.log('✅ User authenticated:', this.currentUser.email);
                         } else {
+                            console.warn('❌ User not authenticated, redirecting to login');
                             window.location.href = '/login';
                         }
                     } else {
+                        console.warn('❌ Auth request failed, redirecting to login');
                         window.location.href = '/login';
                     }
                 } catch (error) {
-                    console.error('Auth error:', error);
+                    console.error('💥 Auth error:', error);
                     window.location.href = '/login';
                 }
             }
@@ -533,13 +541,27 @@
             }
 
             async sendMessage() {
-                if (!this.selectedConversation) return;
+                if (!this.selectedConversation) {
+                    console.warn('No conversation selected');
+                    this.showError('Please select a conversation first');
+                    return;
+                }
                 
                 const input = document.getElementById('message-input');
                 const sendBtn = document.getElementById('send-message-btn');
                 const message = input.value.trim();
                 
-                if (!message) return;
+                if (!message) {
+                    console.warn('Empty message');
+                    return;
+                }
+                
+                const receiverId = this.selectedConversation.other_user_id;
+                console.log('🔄 Sending message:', { 
+                    receiverId, 
+                    messageLength: message.length,
+                    currentUser: this.currentUser?.id 
+                });
                 
                 sendBtn.disabled = true;
                 sendBtn.textContent = 'Sending...';
@@ -552,24 +574,37 @@
                         },
                         credentials: 'include',
                         body: JSON.stringify({
-                            receiverId: this.selectedConversation.other_user_id,
+                            receiverId: receiverId,
                             message: message
                         })
                     });
                     
+                    console.log('📡 Response status:', response.status);
+                    
                     if (response.ok) {
+                        const result = await response.json();
+                        console.log('✅ Message sent successfully:', result);
+                        
                         input.value = '';
                         document.getElementById('char-count').textContent = '0/2000';
                         await this.loadMessages(this.selectedConversation.other_user_id);
                         await this.loadConversations();
                         this.showSuccess('Message sent!');
                     } else {
-                        const error = await response.json();
-                        this.showError(error.error || 'Failed to send message');
+                        let errorMessage;
+                        try {
+                            const error = await response.json();
+                            errorMessage = error.error || `HTTP ${response.status}`;
+                        } catch {
+                            errorMessage = `HTTP ${response.status} - ${response.statusText}`;
+                        }
+                        
+                        console.error('❌ Failed to send message:', response.status, errorMessage);
+                        this.showError(`Failed to send: ${errorMessage}`);
                     }
                 } catch (error) {
-                    console.error('Send message error:', error);
-                    this.showError('Failed to send message');
+                    console.error('💥 Send message error:', error);
+                    this.showError('Network error - check connection');
                 } finally {
                     sendBtn.disabled = false;
                     sendBtn.textContent = 'Send';
