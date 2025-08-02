@@ -50,6 +50,26 @@ export default async function handler(req, res) {
         return await handleChatStats(req, res);
       case 'chat-delete':
         return await handleChatDelete(req, res);
+      // Profile endpoints
+      case 'profile':
+        return await handleProfile(req, res);
+      case 'update-profile':
+        return await handleUpdateProfile(req, res);
+      case 'profile-stats':
+        return await handleProfileStats(req, res);
+      case 'recent-activity':
+        return await handleRecentActivity(req, res);
+      // Direct messaging endpoints  
+      case 'send-message':
+        return await handleSendDirectMessage(req, res);
+      case 'get-messages':
+        return await handleGetDirectMessages(req, res);
+      case 'get-conversations':
+        return await handleGetConversations(req, res);
+      case 'mark-read':
+        return await handleMarkMessagesRead(req, res);
+      case 'search-users':
+        return await handleSearchUsers(req, res);
       case 'health':
         return res.status(200).json({ 
           status: 'OK', 
@@ -458,5 +478,539 @@ async function handleChatDelete(req, res) {
   } catch (error) {
     console.error('Error deleting chat message:', error);
     return res.status(500).json({ error: 'Failed to delete message' });
+  }
+}
+
+// Profile endpoints
+async function handleProfile(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { userId } = req.query;
+    const targetUserId = userId ? parseInt(userId) : decoded.id;
+
+    // Get user profile with extended fields
+    const user = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        displayName: true,
+        bio: true,
+        avatar: true,
+        location: true,
+        website: true,
+        tier: true,
+        isPublic: true,
+        lastSeenAt: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check privacy settings if not own profile
+    if (targetUserId !== decoded.id && !user.isPublic) {
+      return res.status(403).json({ error: 'Profile is private' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: user
+    });
+
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    return res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+}
+
+async function handleUpdateProfile(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { username, displayName, bio, location, website, isPublic } = req.body;
+
+    // Validate username uniqueness if provided
+    if (username) {
+      const existingUser = await prisma.user.findUnique({
+        where: { username }
+      });
+      
+      if (existingUser && existingUser.id !== decoded.id) {
+        return res.status(409).json({ error: 'Username already taken' });
+      }
+    }
+
+    // Update profile
+    const updatedUser = await prisma.user.update({
+      where: { id: decoded.id },
+      data: {
+        username: username || null,
+        displayName: displayName || null,
+        bio: bio || null,
+        location: location || null,
+        website: website || null,
+        isPublic: isPublic !== undefined ? isPublic : true,
+        updatedAt: new Date()
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        displayName: true,
+        bio: true,
+        location: true,
+        website: true,
+        tier: true,
+        isPublic: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+}
+
+async function handleProfileStats(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { userId } = req.query;
+    const targetUserId = userId ? parseInt(userId) : decoded.id;
+
+    // Check if user exists and is public (if not own profile)
+    if (targetUserId !== decoded.id) {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: { isPublic: true }
+      });
+      
+      if (!targetUser || !targetUser.isPublic) {
+        return res.status(403).json({ error: 'Profile stats are private' });
+      }
+    }
+
+    // Get analysis stats
+    const totalAnalyses = await prisma.analysis.count({
+      where: { userId: targetUserId }
+    });
+
+    const successfulAnalyses = await prisma.analysis.count({
+      where: {
+        userId: targetUserId,
+        score: { gte: 70 }
+      }
+    });
+
+    // Get chat message count
+    const chatMessages = await prisma.chatMessage.count({
+      where: {
+        userId: targetUserId,
+        isDeleted: false
+      }
+    });
+
+    const successRate = totalAnalyses > 0 ? Math.round((successfulAnalyses / totalAnalyses) * 100) : 0;
+
+    const stats = {
+      totalAnalyses,
+      successRate: `${successRate}%`,
+      chatMessages
+    };
+
+    return res.status(200).json({
+      success: true,
+      stats
+    });
+
+  } catch (error) {
+    console.error('Error fetching profile stats:', error);
+    return res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+}
+
+async function handleRecentActivity(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { userId } = req.query;
+    const targetUserId = userId ? parseInt(userId) : decoded.id;
+
+    // Check privacy if not own profile
+    if (targetUserId !== decoded.id) {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: { isPublic: true }
+      });
+      
+      if (!targetUser || !targetUser.isPublic) {
+        return res.status(403).json({ error: 'Activity is private' });
+      }
+    }
+
+    // Get recent analyses
+    const recentAnalyses = await prisma.analysis.findMany({
+      where: { userId: targetUserId },
+      orderBy: { timestamp: 'desc' },
+      take: 10,
+      select: {
+        cryptoSymbol: true,
+        score: true,
+        signal: true,
+        timestamp: true
+      }
+    });
+
+    // Format activities
+    const activities = recentAnalyses.map(analysis => ({
+      type: 'analysis',
+      description: `Analyzed ${analysis.cryptoSymbol} - ${analysis.signal} signal (${analysis.score}/100)`,
+      timestamp: analysis.timestamp
+    }));
+
+    return res.status(200).json({
+      success: true,
+      activities
+    });
+
+  } catch (error) {
+    console.error('Error fetching recent activity:', error);
+    return res.status(500).json({ error: 'Failed to fetch activity' });
+  }
+}
+
+// Direct messaging endpoints
+async function handleSendDirectMessage(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { receiverId, message } = req.body;
+
+    if (!receiverId || !message) {
+      return res.status(400).json({ error: 'Receiver ID and message are required' });
+    }
+
+    if (message.length > 2000) {
+      return res.status(400).json({ error: 'Message too long (max 2000 characters)' });
+    }
+
+    // Check if receiver exists and is public
+    const receiver = await prisma.user.findUnique({
+      where: { id: parseInt(receiverId) },
+      select: { id: true, isPublic: true }
+    });
+
+    if (!receiver) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!receiver.isPublic) {
+      return res.status(403).json({ error: 'User is not accepting messages' });
+    }
+
+    // Create message
+    const directMessage = await prisma.directMessage.create({
+      data: {
+        senderId: decoded.id,
+        receiverId: parseInt(receiverId),
+        message: message.trim()
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatar: true
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true
+          }
+        }
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: directMessage
+    });
+
+  } catch (error) {
+    console.error('Error sending direct message:', error);
+    return res.status(500).json({ error: 'Failed to send message' });
+  }
+}
+
+async function handleGetDirectMessages(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { userId, limit = 50 } = req.query;
+    const otherUserId = parseInt(userId);
+
+    if (!otherUserId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    // Get messages between current user and other user
+    const messages = await prisma.directMessage.findMany({
+      where: {
+        OR: [
+          { senderId: decoded.id, receiverId: otherUserId },
+          { senderId: otherUserId, receiverId: decoded.id }
+        ],
+        isDeleted: false
+      },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(parseInt(limit), 100),
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatar: true
+          }
+        }
+      }
+    });
+
+    // Mark messages as read
+    await prisma.directMessage.updateMany({
+      where: {
+        senderId: otherUserId,
+        receiverId: decoded.id,
+        isRead: false
+      },
+      data: {
+        isRead: true
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      messages: messages.reverse()
+    });
+
+  } catch (error) {
+    console.error('Error fetching direct messages:', error);
+    return res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+}
+
+async function handleGetConversations(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Get all conversations with latest message
+    const conversations = await prisma.$queryRaw`
+      SELECT DISTINCT ON (other_user_id) 
+        other_user_id,
+        latest_message,
+        latest_timestamp,
+        unread_count,
+        username,
+        display_name,
+        avatar
+      FROM (
+        SELECT 
+          CASE 
+            WHEN sender_id = ${decoded.id} THEN receiver_id 
+            ELSE sender_id 
+          END as other_user_id,
+          message as latest_message,
+          created_at as latest_timestamp,
+          (SELECT COUNT(*) FROM direct_messages dm2 
+           WHERE dm2.sender_id = CASE WHEN sender_id = ${decoded.id} THEN receiver_id ELSE sender_id END
+           AND dm2.receiver_id = ${decoded.id} 
+           AND dm2.is_read = false 
+           AND dm2.is_deleted = false) as unread_count,
+          u.username,
+          u.display_name,
+          u.avatar
+        FROM direct_messages dm
+        JOIN users u ON u.id = CASE WHEN sender_id = ${decoded.id} THEN receiver_id ELSE sender_id END
+        WHERE (sender_id = ${decoded.id} OR receiver_id = ${decoded.id})
+        AND is_deleted = false
+        ORDER BY CASE WHEN sender_id = ${decoded.id} THEN receiver_id ELSE sender_id END, created_at DESC
+      ) conversations
+      ORDER BY other_user_id, latest_timestamp DESC
+    `;
+
+    return res.status(200).json({
+      success: true,
+      conversations
+    });
+
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    return res.status(500).json({ error: 'Failed to fetch conversations' });
+  }
+}
+
+async function handleMarkMessagesRead(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    // Mark all messages from this user as read
+    await prisma.directMessage.updateMany({
+      where: {
+        senderId: parseInt(userId),
+        receiverId: decoded.id,
+        isRead: false
+      },
+      data: {
+        isRead: true,
+        updatedAt: new Date()
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Messages marked as read'
+    });
+
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    return res.status(500).json({ error: 'Failed to mark messages as read' });
+  }
+}
+
+async function handleSearchUsers(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { q, limit = 20 } = req.query;
+
+    if (!q || q.length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    }
+
+    const searchTerm = `%${q.toLowerCase()}%`;
+
+    // Search for public users by username, display name, or email
+    const users = await prisma.user.findMany({
+      where: {
+        AND: [
+          { isPublic: true },
+          { id: { not: decoded.id } }, // Exclude current user
+          {
+            OR: [
+              { username: { contains: q, mode: 'insensitive' } },
+              { displayName: { contains: q, mode: 'insensitive' } },
+              { email: { contains: q, mode: 'insensitive' } }
+            ]
+          }
+        ]
+      },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        avatar: true,
+        tier: true,
+        lastSeenAt: true
+      },
+      take: Math.min(parseInt(limit), 50),
+      orderBy: [
+        { tier: 'desc' }, // Premium users first
+        { lastSeenAt: 'desc' }
+      ]
+    });
+
+    return res.status(200).json({
+      success: true,
+      users
+    });
+
+  } catch (error) {
+    console.error('Error searching users:', error);
+    return res.status(500).json({ error: 'Failed to search users' });
   }
 }

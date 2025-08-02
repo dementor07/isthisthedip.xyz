@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Messages - isthisthedip.xyz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .conversation-item:hover {
+            background-color: #f8fafc;
+        }
+        .conversation-item.active {
+            background-color: #eff6ff;
+            border-right: 3px solid #3b82f6;
+        }
+        .message-bubble {
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .message-bubble.sent {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .message-bubble.received {
+            background-color: #f1f5f9;
+        }
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+        }
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #6b7280;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dot:nth-child(3) { animation-delay: 0s; }
+        @keyframes typing {
+            0%, 60%, 100% { transform: initial; }
+            30% { transform: translateY(-10px); }
+        }
+        .search-dropdown {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .unread-badge {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-xl font-bold text-gray-900">isthisthedip.xyz</a>
+                    <span class="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-full">Messages</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/profile" class="text-gray-600 hover:text-gray-900">Profile</a>
+                    <a href="/chat" class="text-gray-600 hover:text-gray-900">Chat</a>
+                    <a href="/dashboard" class="text-gray-600 hover:text-gray-900">Dashboard</a>
+                    <button id="logout-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="flex h-[600px]">
+                <!-- Conversations Sidebar -->
+                <div class="w-1/3 border-r border-gray-200 flex flex-col">
+                    <!-- Search Header -->
+                    <div class="p-4 border-b border-gray-200">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="user-search" 
+                                placeholder="Search users to message..."
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                            <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <!-- Search Dropdown -->
+                            <div id="search-results" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 search-dropdown">
+                                <!-- Search results will appear here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conversations List -->
+                    <div class="flex-1 overflow-y-auto">
+                        <div id="conversations-list" class="divide-y divide-gray-100">
+                            <div id="loading-conversations" class="p-4 text-center">
+                                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                <p class="text-sm text-gray-600">Loading conversations...</p>
+                            </div>
+                        </div>
+                        <div id="no-conversations" class="hidden p-8 text-center text-gray-500">
+                            <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                            <p class="text-sm">No conversations yet</p>
+                            <p class="text-xs text-gray-400 mt-1">Search for users to start messaging</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Area -->
+                <div class="flex-1 flex flex-col">
+                    <!-- Chat Header -->
+                    <div id="chat-header" class="hidden p-4 border-b border-gray-200 bg-gray-50">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div id="chat-avatar" class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-white font-semibold">
+                                    U
+                                </div>
+                                <div>
+                                    <h3 id="chat-username" class="font-semibold text-gray-900">Select a conversation</h3>
+                                    <p id="chat-status" class="text-xs text-gray-500">Online</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button id="view-profile-btn" class="hidden text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    View Profile
+                                </button>
+                                <button id="clear-chat-btn" class="hidden text-red-600 hover:text-red-800 text-sm">
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Welcome Screen -->
+                    <div id="welcome-screen" class="flex-1 flex items-center justify-center bg-gray-50">
+                        <div class="text-center">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">Welcome to Direct Messages</h3>
+                            <p class="text-gray-600 mb-4">Select a conversation or search for users to start messaging</p>
+                            <div class="flex justify-center space-x-4">
+                                <a href="/chat" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                    Join Community Chat
+                                </a>
+                                <a href="/profile" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+                                    View Profile
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Messages Container -->
+                    <div id="messages-container" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
+                        <div id="messages-list"></div>
+                        <div id="typing-indicator" class="hidden flex items-center space-x-2 text-sm text-gray-500">
+                            <div class="typing-indicator">
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                            </div>
+                            <span>User is typing...</span>
+                        </div>
+                    </div>
+
+                    <!-- Message Input -->
+                    <div id="message-input-container" class="hidden p-4 border-t border-gray-200 bg-white">
+                        <div class="flex space-x-4">
+                            <div class="flex-1">
+                                <textarea 
+                                    id="message-input" 
+                                    placeholder="Type your message... (max 2000 characters)"
+                                    class="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    rows="2"
+                                    maxlength="2000"
+                                ></textarea>
+                                <div class="flex justify-between items-center mt-2">
+                                    <span id="char-count" class="text-sm text-gray-500">0/2000</span>
+                                    <button 
+                                        id="send-message-btn" 
+                                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                                        disabled
+                                    >
+                                        Send
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DirectMessagingApp {
+            constructor() {
+                this.currentUser = null;
+                this.selectedConversation = null;
+                this.conversations = [];
+                this.messages = [];
+                this.searchTimeout = null;
+                this.pollingInterval = null;
+                
+                console.log('🚀 Initializing Direct Messaging App...');
+                this.init();
+            }
+
+            async init() {
+                try {
+                    await this.checkAuth();
+                    await this.loadConversations();
+                    this.setupEventListeners();
+                    this.startPolling();
+                    
+                    // Check if there's a specific user to message from URL
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const userId = urlParams.get('user');
+                    if (userId) {
+                        await this.startNewConversation(parseInt(userId));
+                    }
+                    
+                    console.log('✅ Direct messaging app initialized');
+                } catch (error) {
+                    console.error('❌ Failed to initialize messaging app:', error);
+                }
+            }
+
+            async checkAuth() {
+                try {
+                    const response = await fetch('/api/auth?action=me', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.authenticated && data.user) {
+                            this.currentUser = data.user;
+                        } else {
+                            window.location.href = '/login';
+                        }
+                    } else {
+                        window.location.href = '/login';
+                    }
+                } catch (error) {
+                    console.error('Auth error:', error);
+                    window.location.href = '/login';
+                }
+            }
+
+            async loadConversations() {
+                try {
+                    const response = await fetch('/api/auth?action=get-conversations', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.conversations = data.conversations || [];
+                        this.renderConversations();
+                    } else {
+                        throw new Error('Failed to load conversations');
+                    }
+                } catch (error) {
+                    console.error('Error loading conversations:', error);
+                    this.conversations = [];
+                    this.renderConversations();
+                } finally {
+                    document.getElementById('loading-conversations').classList.add('hidden');
+                }
+            }
+
+            renderConversations() {
+                const container = document.getElementById('conversations-list');
+                const noConversations = document.getElementById('no-conversations');
+                
+                if (this.conversations.length === 0) {
+                    container.innerHTML = '';
+                    noConversations.classList.remove('hidden');
+                    return;
+                }
+                
+                noConversations.classList.add('hidden');
+                
+                const conversationsHTML = this.conversations.map(conv => {
+                    const displayName = conv.display_name || conv.username || 'Anonymous';
+                    const avatar = conv.avatar ? 
+                        `<img src="${conv.avatar}" class="w-12 h-12 rounded-full object-cover">` :
+                        `<div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-white font-semibold">${displayName.charAt(0).toUpperCase()}</div>`;
+                    
+                    const isActive = this.selectedConversation?.other_user_id === conv.other_user_id;
+                    const unreadBadge = conv.unread_count > 0 ? 
+                        `<span class="unread-badge bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">${conv.unread_count}</span>` : '';
+                    
+                    return `
+                        <div class="conversation-item ${isActive ? 'active' : ''} p-4 cursor-pointer hover:bg-gray-50" data-user-id="${conv.other_user_id}">
+                            <div class="flex items-center space-x-3">
+                                ${avatar}
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-sm font-semibold text-gray-900 truncate">${displayName}</p>
+                                        ${unreadBadge}
+                                    </div>
+                                    <p class="text-sm text-gray-600 truncate">${conv.latest_message || 'No messages yet'}</p>
+                                    <p class="text-xs text-gray-400">${new Date(conv.latest_timestamp).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                container.innerHTML = conversationsHTML;
+            }
+
+            async selectConversation(userId) {
+                this.selectedConversation = this.conversations.find(c => c.other_user_id === parseInt(userId));
+                if (!this.selectedConversation) {
+                    // Create new conversation
+                    this.selectedConversation = {
+                        other_user_id: parseInt(userId),
+                        display_name: 'User',
+                        username: 'user',
+                        avatar: null
+                    };
+                }
+                
+                this.renderConversations(); // Update active state
+                await this.loadMessages(userId);
+                this.showChatInterface();
+            }
+
+            showChatInterface() {
+                document.getElementById('welcome-screen').classList.add('hidden');
+                document.getElementById('chat-header').classList.remove('hidden');
+                document.getElementById('messages-container').classList.remove('hidden');
+                document.getElementById('message-input-container').classList.remove('hidden');
+                
+                // Update chat header
+                const displayName = this.selectedConversation.display_name || this.selectedConversation.username || 'Anonymous';
+                document.getElementById('chat-username').textContent = displayName;
+                
+                const avatar = document.getElementById('chat-avatar');
+                if (this.selectedConversation.avatar) {
+                    avatar.innerHTML = `<img src="${this.selectedConversation.avatar}" class="w-full h-full rounded-full object-cover">`;
+                } else {
+                    avatar.textContent = displayName.charAt(0).toUpperCase();
+                }
+                
+                document.getElementById('view-profile-btn').classList.remove('hidden');
+                document.getElementById('view-profile-btn').onclick = () => {
+                    window.location.href = `/profile?id=${this.selectedConversation.other_user_id}`;
+                };
+            }
+
+            async loadMessages(userId) {
+                try {
+                    const response = await fetch(`/api/auth?action=get-messages&userId=${userId}&limit=50`, {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.messages = data.messages || [];
+                        this.renderMessages();
+                    } else {
+                        throw new Error('Failed to load messages');
+                    }
+                } catch (error) {
+                    console.error('Error loading messages:', error);
+                    this.messages = [];
+                    this.renderMessages();
+                }
+            }
+
+            renderMessages() {
+                const container = document.getElementById('messages-list');
+                
+                if (this.messages.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <p>No messages yet. Start the conversation!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const messagesHTML = this.messages.map(message => {
+                    const isSent = message.sender.id === this.currentUser.id;
+                    const bubbleClass = isSent ? 'sent text-white ml-auto' : 'received text-gray-900 mr-auto';
+                    const alignment = isSent ? 'flex-row-reverse' : 'flex-row';
+                    
+                    const senderName = message.sender.displayName || message.sender.username || 'Anonymous';
+                    const avatar = message.sender.avatar ? 
+                        `<img src="${message.sender.avatar}" class="w-8 h-8 rounded-full object-cover">` :
+                        `<div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-white text-xs font-semibold">${senderName.charAt(0).toUpperCase()}</div>`;
+                    
+                    return `
+                        <div class="flex ${alignment} items-end space-x-2 mb-4">
+                            ${!isSent ? avatar : ''}
+                            <div class="message-bubble ${bubbleClass} px-4 py-2 rounded-lg">
+                                <p class="text-sm">${this.escapeHtml(message.message)}</p>
+                                <p class="text-xs opacity-75 mt-1">${new Date(message.createdAt).toLocaleTimeString()}</p>
+                            </div>
+                            ${isSent ? avatar : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                container.innerHTML = messagesHTML;
+                this.scrollToBottom();
+            }
+
+            scrollToBottom() {
+                const container = document.getElementById('messages-container');
+                container.scrollTop = container.scrollHeight;
+            }
+
+            async sendMessage() {
+                if (!this.selectedConversation) return;
+                
+                const input = document.getElementById('message-input');
+                const sendBtn = document.getElementById('send-message-btn');
+                const message = input.value.trim();
+                
+                if (!message) return;
+                
+                sendBtn.disabled = true;
+                sendBtn.textContent = 'Sending...';
+                
+                try {
+                    const response = await fetch('/api/auth?action=send-message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            receiverId: this.selectedConversation.other_user_id,
+                            message: message
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        input.value = '';
+                        document.getElementById('char-count').textContent = '0/2000';
+                        await this.loadMessages(this.selectedConversation.other_user_id);
+                        await this.loadConversations();
+                        this.showSuccess('Message sent!');
+                    } else {
+                        const error = await response.json();
+                        this.showError(error.error || 'Failed to send message');
+                    }
+                } catch (error) {
+                    console.error('Send message error:', error);
+                    this.showError('Failed to send message');
+                } finally {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = 'Send';
+                }
+            }
+
+            async searchUsers(query) {
+                if (query.length < 2) {
+                    document.getElementById('search-results').classList.add('hidden');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/auth?action=search-users&q=${encodeURIComponent(query)}&limit=10`, {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.renderSearchResults(data.users || []);
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }
+
+            renderSearchResults(users) {
+                const container = document.getElementById('search-results');
+                
+                if (users.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-4 text-sm text-gray-500 text-center">
+                            No users found
+                        </div>
+                    `;
+                } else {
+                    const usersHTML = users.map(user => {
+                        const displayName = user.displayName || user.username || 'Anonymous';
+                        const avatar = user.avatar ? 
+                            `<img src="${user.avatar}" class="w-10 h-10 rounded-full object-cover">` :
+                            `<div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-white font-semibold">${displayName.charAt(0).toUpperCase()}</div>`;
+                        
+                        const tierBadge = this.getTierBadge(user.tier);
+                        
+                        return `
+                            <div class="p-3 hover:bg-gray-50 cursor-pointer search-user-item" data-user-id="${user.id}">
+                                <div class="flex items-center space-x-3">
+                                    ${avatar}
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-2">
+                                            <p class="font-semibold text-gray-900">${displayName}</p>
+                                            ${tierBadge}
+                                        </div>
+                                        <p class="text-sm text-gray-600">@${user.username || user.email?.split('@')[0] || 'user'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    container.innerHTML = usersHTML;
+                }
+                
+                container.classList.remove('hidden');
+            }
+
+            getTierBadge(tier) {
+                switch (tier) {
+                    case 'pro':
+                        return '<span class="bg-purple-500 text-white px-2 py-1 text-xs rounded-full">PRO</span>';
+                    case 'premium':
+                        return '<span class="bg-blue-500 text-white px-2 py-1 text-xs rounded-full">PREMIUM</span>';
+                    default:
+                        return '<span class="bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded-full">FREE</span>';
+                }
+            }
+
+            async startNewConversation(userId) {
+                // Check if conversation already exists
+                const existing = this.conversations.find(c => c.other_user_id === userId);
+                if (existing) {
+                    await this.selectConversation(userId);
+                } else {
+                    // Create new conversation entry
+                    await this.selectConversation(userId);
+                }
+            }
+
+            setupEventListeners() {
+                // Search input
+                const searchInput = document.getElementById('user-search');
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => {
+                        this.searchUsers(e.target.value);
+                    }, 300);
+                });
+                
+                // Hide search results when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('#user-search') && !e.target.closest('#search-results')) {
+                        document.getElementById('search-results').classList.add('hidden');
+                    }
+                });
+                
+                // Search results click
+                document.addEventListener('click', (e) => {
+                    const userItem = e.target.closest('.search-user-item');
+                    if (userItem) {
+                        const userId = parseInt(userItem.dataset.userId);
+                        this.startNewConversation(userId);
+                        document.getElementById('search-results').classList.add('hidden');
+                        searchInput.value = '';
+                    }
+                });
+                
+                // Conversation selection
+                document.addEventListener('click', (e) => {
+                    const convItem = e.target.closest('.conversation-item');
+                    if (convItem) {
+                        const userId = parseInt(convItem.dataset.userId);
+                        this.selectConversation(userId);
+                    }
+                });
+                
+                // Message input
+                const messageInput = document.getElementById('message-input');
+                const sendBtn = document.getElementById('send-message-btn');
+                const charCount = document.getElementById('char-count');
+                
+                messageInput.addEventListener('input', () => {
+                    const length = messageInput.value.length;
+                    charCount.textContent = `${length}/2000`;
+                    sendBtn.disabled = length === 0 || length > 2000;
+                });
+                
+                messageInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+                
+                // Send button
+                sendBtn.addEventListener('click', () => {
+                    this.sendMessage();
+                });
+                
+                // Logout
+                document.getElementById('logout-btn').addEventListener('click', () => {
+                    this.logout();
+                });
+            }
+
+            startPolling() {
+                // Poll for new messages every 10 seconds
+                this.pollingInterval = setInterval(async () => {
+                    if (this.selectedConversation) {
+                        await this.loadMessages(this.selectedConversation.other_user_id);
+                    }
+                    await this.loadConversations();
+                }, 10000);
+            }
+
+            async logout() {
+                try {
+                    await fetch('/api/auth?action=logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                }
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            showSuccess(message) {
+                this.showNotification(message, 'success');
+            }
+
+            showError(message) {
+                this.showNotification(message, 'error');
+            }
+
+            showNotification(message, type) {
+                const className = type === 'error' ? 
+                    'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50' :
+                    'fixed top-4 right-4 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg z-50';
+                
+                const notification = document.createElement('div');
+                notification.className = className;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 3000);
+            }
+        }
+
+        // Initialize the app
+        const messagingApp = new DirectMessagingApp();
+    </script>
+</body>
+</html>

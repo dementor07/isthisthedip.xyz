@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - isthisthedip.xyz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .profile-avatar {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+        .tier-badge {
+            animation: pulse 2s infinite;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .message-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        .edit-form {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .edit-form.open {
+            max-height: 1000px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-xl font-bold text-gray-900">isthisthedip.xyz</a>
+                    <span class="px-3 py-1 text-sm bg-purple-100 text-purple-800 rounded-full">Profile</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/chat" class="text-gray-600 hover:text-gray-900">Chat</a>
+                    <a href="/dashboard" class="text-gray-600 hover:text-gray-900">Dashboard</a>
+                    <button id="logout-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Profile Header -->
+        <div class="bg-white rounded-lg shadow-sm p-8 mb-6">
+            <div class="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
+                <!-- Avatar -->
+                <div class="flex-shrink-0">
+                    <div id="user-avatar" class="profile-avatar w-24 h-24 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                        U
+                    </div>
+                </div>
+                
+                <!-- Profile Info -->
+                <div class="flex-1">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h1 id="display-name" class="text-2xl font-bold text-gray-900">Loading...</h1>
+                            <p id="username" class="text-gray-600">@loading</p>
+                            <p id="user-bio" class="text-gray-700 mt-2 max-w-md">Loading profile...</p>
+                        </div>
+                        <div class="flex items-center space-x-3 mt-4 sm:mt-0">
+                            <span id="user-tier-badge" class="tier-badge px-3 py-1 text-sm rounded-full text-white bg-gray-500">
+                                Loading
+                            </span>
+                            <button id="edit-profile-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                Edit Profile
+                            </button>
+                            <button id="message-user-btn" class="hidden message-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                Send Message
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Additional Info -->
+                    <div class="flex flex-wrap items-center space-x-6 mt-4 text-sm text-gray-600">
+                        <div id="location-info" class="hidden flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span id="user-location"></span>
+                        </div>
+                        <div id="website-info" class="hidden flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                            </svg>
+                            <a id="user-website" href="#" target="_blank" class="text-blue-600 hover:text-blue-800"></a>
+                        </div>
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-.5-2.5A2 2 0 018.618 3H15.382a2 2 0 011.118 1.5L16 7m-6 0v10a2 2 0 002 2h4a2 2 0 002-2V7"></path>
+                            </svg>
+                            <span id="join-date">Joined in 2025</span>
+                        </div>
+                        <div id="last-seen" class="flex items-center">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            <span>Online now</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Form (Hidden by default) -->
+        <div id="edit-profile-form" class="edit-form bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Edit Profile</h3>
+            <form id="profile-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="edit-username" class="block text-sm font-medium text-gray-700">Username</label>
+                        <input type="text" id="edit-username" name="username" 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Enter username" maxlength="30">
+                    </div>
+                    <div>
+                        <label for="edit-display-name" class="block text-sm font-medium text-gray-700">Display Name</label>
+                        <input type="text" id="edit-display-name" name="displayName"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Enter display name" maxlength="50">
+                    </div>
+                </div>
+                <div>
+                    <label for="edit-bio" class="block text-sm font-medium text-gray-700">Bio</label>
+                    <textarea id="edit-bio" name="bio" rows="3"
+                              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Tell us about yourself..." maxlength="500"></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="edit-location" class="block text-sm font-medium text-gray-700">Location</label>
+                        <input type="text" id="edit-location" name="location"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Where are you from?" maxlength="100">
+                    </div>
+                    <div>
+                        <label for="edit-website" class="block text-sm font-medium text-gray-700">Website</label>
+                        <input type="url" id="edit-website" name="website"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="https://your-website.com" maxlength="255">
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="edit-is-public" name="isPublic"
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="edit-is-public" class="ml-2 block text-sm text-gray-900">
+                        Make my profile public (others can find and message me)
+                    </label>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancel-edit-btn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Profile Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="stats-card bg-white rounded-lg shadow-sm p-6 transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Analyses</dt>
+                            <dd id="total-analyses" class="text-lg font-medium text-gray-900">Loading...</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-card bg-white rounded-lg shadow-sm p-6 transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8m0 8l-8-8m8 8h-8m0 0v-8"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Success Rate</dt>
+                            <dd id="success-rate" class="text-lg font-medium text-gray-900">Loading...</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-card bg-white rounded-lg shadow-sm p-6 transition-all duration-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Chat Messages</dt>
+                            <dd id="chat-messages" class="text-lg font-medium text-gray-900">Loading...</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+            <div id="recent-activity" class="space-y-4">
+                <div class="text-center py-8 text-gray-500">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p>Loading recent activity...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <a href="/dashboard" class="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                    <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Dashboard</p>
+                        <p class="text-sm text-gray-600">View analytics</p>
+                    </div>
+                </a>
+                
+                <a href="/chat" class="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                    <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Community Chat</p>
+                        <p class="text-sm text-gray-600">Join discussions</p>
+                    </div>
+                </a>
+                
+                <a href="/messages" class="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                    <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Direct Messages</p>
+                        <p class="text-sm text-gray-600">Private conversations</p>
+                    </div>
+                </a>
+                
+                <a href="/" class="flex items-center p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+                    <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8m0 8l-8-8m8 8h-8m0 0v-8"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Analyze Crypto</p>
+                        <p class="text-sm text-gray-600">Find the dip</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ProfileManager {
+            constructor() {
+                this.currentUser = null;
+                this.viewingUserId = null;
+                this.isOwnProfile = true;
+                this.init();
+            }
+
+            async init() {
+                // Get user ID from URL params if viewing another user's profile
+                const urlParams = new URLSearchParams(window.location.search);
+                this.viewingUserId = urlParams.get('id');
+                
+                await this.loadCurrentUser();
+                await this.loadProfile();
+                await this.loadStats();
+                await this.loadRecentActivity();
+                this.setupEventListeners();
+                
+                console.log('✅ Profile manager initialized');
+            }
+
+            async loadCurrentUser() {
+                try {
+                    const response = await fetch('/api/auth?action=me', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.authenticated && data.user) {
+                            this.currentUser = data.user;
+                            
+                            // If no specific user ID, show own profile
+                            if (!this.viewingUserId) {
+                                this.viewingUserId = this.currentUser.id;
+                                this.isOwnProfile = true;
+                            } else {
+                                this.isOwnProfile = parseInt(this.viewingUserId) === this.currentUser.id;
+                            }
+                        } else {
+                            window.location.href = '/login';
+                        }
+                    } else {
+                        window.location.href = '/login';
+                    }
+                } catch (error) {
+                    console.error('Auth error:', error);
+                    window.location.href = '/login';
+                }
+            }
+
+            async loadProfile() {
+                try {
+                    const url = this.isOwnProfile ? 
+                        '/api/auth?action=profile' :
+                        `/api/auth?action=profile&userId=${this.viewingUserId}`;
+                        
+                    const response = await fetch(url, {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.displayProfile(data.user || data);
+                    } else {
+                        throw new Error('Failed to load profile');
+                    }
+                } catch (error) {
+                    console.error('Profile load error:', error);
+                    this.showError('Failed to load profile');
+                }
+            }
+
+            displayProfile(user) {
+                // Update avatar
+                const avatar = document.getElementById('user-avatar');
+                if (user.avatar) {
+                    avatar.innerHTML = `<img src="${user.avatar}" alt="Avatar" class="w-full h-full rounded-full object-cover">`;
+                } else {
+                    const initial = (user.displayName || user.username || user.email || 'U').charAt(0).toUpperCase();
+                    avatar.textContent = initial;
+                }
+
+                // Update basic info
+                document.getElementById('display-name').textContent = user.displayName || user.username || user.email?.split('@')[0] || 'Anonymous';
+                document.getElementById('username').textContent = user.username ? `@${user.username}` : `@${user.email?.split('@')[0] || 'user'}`;
+                document.getElementById('user-bio').textContent = user.bio || 'No bio provided.';
+
+                // Update tier badge
+                const tierBadge = document.getElementById('user-tier-badge');
+                const tier = user.tier || 'free';
+                const isAdmin = user.email && user.email.includes('admin');
+                
+                if (isAdmin) {
+                    tierBadge.textContent = 'ADMIN';
+                    tierBadge.className = 'tier-badge px-3 py-1 text-sm rounded-full text-white bg-gradient-to-r from-red-500 to-orange-500';
+                } else if (tier === 'pro') {
+                    tierBadge.textContent = 'PRO';
+                    tierBadge.className = 'tier-badge px-3 py-1 text-sm rounded-full text-white bg-gradient-to-r from-purple-500 to-indigo-500';
+                } else if (tier === 'premium') {
+                    tierBadge.textContent = 'PREMIUM';
+                    tierBadge.className = 'tier-badge px-3 py-1 text-sm rounded-full text-white bg-gradient-to-r from-blue-500 to-cyan-500';
+                } else {
+                    tierBadge.textContent = 'FREE';
+                    tierBadge.className = 'tier-badge px-3 py-1 text-sm rounded-full text-white bg-gray-500';
+                }
+
+                // Update additional info
+                const locationInfo = document.getElementById('location-info');
+                const websiteInfo = document.getElementById('website-info');
+                
+                if (user.location) {
+                    document.getElementById('user-location').textContent = user.location;
+                    locationInfo.classList.remove('hidden');
+                }
+                
+                if (user.website) {
+                    const websiteLink = document.getElementById('user-website');
+                    websiteLink.href = user.website;
+                    websiteLink.textContent = user.website;
+                    websiteInfo.classList.remove('hidden');
+                }
+
+                // Update join date
+                if (user.createdAt) {
+                    const joinDate = new Date(user.createdAt);
+                    document.getElementById('join-date').textContent = `Joined ${joinDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+                }
+
+                // Show/hide action buttons
+                if (this.isOwnProfile) {
+                    document.getElementById('edit-profile-btn').classList.remove('hidden');
+                    document.getElementById('message-user-btn').classList.add('hidden');
+                } else {
+                    document.getElementById('edit-profile-btn').classList.add('hidden');
+                    document.getElementById('message-user-btn').classList.remove('hidden');
+                }
+
+                // Populate edit form if own profile
+                if (this.isOwnProfile) {
+                    this.populateEditForm(user);
+                }
+            }
+
+            populateEditForm(user) {
+                document.getElementById('edit-username').value = user.username || '';
+                document.getElementById('edit-display-name').value = user.displayName || '';
+                document.getElementById('edit-bio').value = user.bio || '';
+                document.getElementById('edit-location').value = user.location || '';
+                document.getElementById('edit-website').value = user.website || '';
+                document.getElementById('edit-is-public').checked = user.isPublic !== false;
+            }
+
+            async loadStats() {
+                try {
+                    const url = this.isOwnProfile ? 
+                        '/api/auth?action=profile-stats' :
+                        `/api/auth?action=profile-stats&userId=${this.viewingUserId}`;
+                        
+                    const response = await fetch(url, {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.displayStats(data.stats || data);
+                    } else {
+                        this.displayStats({
+                            totalAnalyses: 0,
+                            successRate: '0%',
+                            chatMessages: 0
+                        });
+                    }
+                } catch (error) {
+                    console.error('Stats load error:', error);
+                    this.displayStats({
+                        totalAnalyses: 0,
+                        successRate: '0%',
+                        chatMessages: 0
+                    });
+                }
+            }
+
+            displayStats(stats) {
+                document.getElementById('total-analyses').textContent = stats.totalAnalyses || 0;
+                document.getElementById('success-rate').textContent = stats.successRate || '0%';
+                document.getElementById('chat-messages').textContent = stats.chatMessages || 0;
+            }
+
+            async loadRecentActivity() {
+                try {
+                    const url = this.isOwnProfile ? 
+                        '/api/auth?action=recent-activity' :
+                        `/api/auth?action=recent-activity&userId=${this.viewingUserId}`;
+                        
+                    const response = await fetch(url, {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.displayRecentActivity(data.activities || []);
+                    } else {
+                        this.displayRecentActivity([]);
+                    }
+                } catch (error) {
+                    console.error('Activity load error:', error);
+                    this.displayRecentActivity([]);
+                }
+            }
+
+            displayRecentActivity(activities) {
+                const container = document.getElementById('recent-activity');
+                
+                if (activities.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <p>No recent activity found.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const activitiesHTML = activities.map(activity => `
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8m0 8l-8-8m8 8h-8m0 0v-8"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-900">${activity.description}</p>
+                            <p class="text-sm text-gray-600">${new Date(activity.timestamp).toLocaleString()}</p>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = activitiesHTML;
+            }
+
+            setupEventListeners() {
+                // Edit profile toggle
+                document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
+                    this.toggleEditForm();
+                });
+
+                // Cancel edit
+                document.getElementById('cancel-edit-btn')?.addEventListener('click', () => {
+                    this.toggleEditForm();
+                });
+
+                // Profile form submit
+                document.getElementById('profile-form')?.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveProfile();
+                });
+
+                // Message user
+                document.getElementById('message-user-btn')?.addEventListener('click', () => {
+                    this.openDirectMessage();
+                });
+
+                // Logout
+                document.getElementById('logout-btn')?.addEventListener('click', () => {
+                    this.logout();
+                });
+            }
+
+            toggleEditForm() {
+                const form = document.getElementById('edit-profile-form');
+                form.classList.toggle('open');
+            }
+
+            async saveProfile() {
+                const formData = new FormData(document.getElementById('profile-form'));
+                const profileData = Object.fromEntries(formData.entries());
+                profileData.isPublic = formData.has('isPublic');
+
+                try {
+                    const response = await fetch('/api/auth?action=update-profile', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(profileData)
+                    });
+
+                    if (response.ok) {
+                        this.showSuccess('Profile updated successfully!');
+                        this.toggleEditForm();
+                        await this.loadProfile();
+                    } else {
+                        const error = await response.json();
+                        this.showError(error.error || 'Failed to update profile');
+                    }
+                } catch (error) {
+                    console.error('Save profile error:', error);
+                    this.showError('Failed to update profile');
+                }
+            }
+
+            openDirectMessage() {
+                window.location.href = `/messages?user=${this.viewingUserId}`;
+            }
+
+            async logout() {
+                try {
+                    await fetch('/api/auth?action=logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                }
+            }
+
+            showSuccess(message) {
+                this.showNotification(message, 'success');
+            }
+
+            showError(message) {
+                this.showNotification(message, 'error');
+            }
+
+            showNotification(message, type) {
+                const className = type === 'error' ? 
+                    'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50' :
+                    'fixed top-4 right-4 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg z-50';
+                
+                const notification = document.createElement('div');
+                notification.className = className;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 5000);
+            }
+        }
+
+        // Initialize profile manager
+        const profileManager = new ProfileManager();
+    </script>
+</body>
+</html>

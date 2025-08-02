@@ -40,6 +40,14 @@
       "destination": "/chat.html"
     },
     {
+      "source": "/profile",
+      "destination": "/profile.html"
+    },
+    {
+      "source": "/messages",
+      "destination": "/messages.html"
+    },
+    {
       "source": "/js/(.*)",
       "destination": "/js/$1"
     },
