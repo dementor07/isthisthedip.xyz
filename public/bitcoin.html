@@ -439,6 +439,43 @@
             updateBitcoinData();
         });
     </script>
+    
+    <script>
+        // Fetch real-time Bitcoin data
+        async function fetchBitcoinData() {
+            try {
+                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true');
+                const data = await response.json();
+                
+                if (data.bitcoin) {
+                    const btc = data.bitcoin;
+                    
+                    // Update price display
+                    document.getElementById('btc-price').textContent = `$${btc.usd.toLocaleString()}`;
+                    
+                    // Update 24h change with color
+                    const changeEl = document.getElementById('btc-change');
+                    const change = btc.usd_24h_change;
+                    changeEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+                    changeEl.className = `text-3xl font-bold mb-2 ${change >= 0 ? 'text-green-900' : 'text-red-900'}`;
+                    
+                    // Update volume
+                    document.getElementById('btc-volume').textContent = `$${(btc.usd_24h_vol / 1e9).toFixed(1)}B`;
+                    
+                    console.log('✅ Bitcoin data updated');
+                }
+            } catch (error) {
+                console.warn('⚠️ Failed to fetch Bitcoin data:', error);
+            }
+        }
+        
+        // Initialize real-time data
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchBitcoinData();
+            // Update every 2 minutes
+            setInterval(fetchBitcoinData, 2 * 60 * 1000);
+        });
+    </script>
 </body>
 
 </html>

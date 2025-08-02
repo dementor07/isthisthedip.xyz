@@ -373,8 +373,8 @@
         // Portfolio storage
         let portfolio = JSON.parse(localStorage.getItem('cryptoPortfolio')) || [];
 
-        // Cryptocurrency data
-        const cryptoData = {
+        // Cryptocurrency data with live prices
+        let cryptoData = {
             bitcoin: { name: 'Bitcoin', symbol: 'BTC', price: 95847 },
             ethereum: { name: 'Ethereum', symbol: 'ETH', price: 3247 },
             solana: { name: 'Solana', symbol: 'SOL', price: 189 },
@@ -384,6 +384,28 @@
             chainlink: { name: 'Chainlink', symbol: 'LINK', price: 22.45 },
             avalanche: { name: 'Avalanche', symbol: 'AVAX', price: 38.92 }
         };
+
+        // Fetch real-time prices from CoinGecko
+        async function fetchRealTimePrices() {
+            try {
+                const cryptos = Object.keys(cryptoData).join(',');
+                const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptos}&vs_currencies=usd&include_24hr_change=true`);
+                const data = await response.json();
+                
+                // Update crypto data with real prices
+                Object.keys(cryptoData).forEach(crypto => {
+                    if (data[crypto]) {
+                        cryptoData[crypto].price = data[crypto].usd;
+                        cryptoData[crypto].change_24h = data[crypto].usd_24h_change;
+                    }
+                });
+                
+                console.log('✅ Real-time prices updated');
+                updatePriceDisplays();
+            } catch (error) {
+                console.warn('⚠️ Failed to fetch real-time prices, using cached data:', error);
+            }
+        }
 
         // Calculate profit/loss
         function calculateProfit() {
@@ -439,19 +461,58 @@
                 `$${longTermTax.toLocaleString()} (20%)` : '$0 (No tax on losses)';
         }
 
+        // Update price displays
+        function updatePriceDisplays() {
+            // Update examples with real prices
+            const btcPrice = cryptoData.bitcoin.price;
+            const ethPrice = cryptoData.ethereum.price;
+            
+            // Update Bitcoin example calculations
+            document.querySelector('[onclick*="bitcoin, 10000, 30000"]').innerHTML = 
+                `Try Bitcoin Example<br><small>$10K at $30K → $${btcPrice.toLocaleString()}</small>`;
+            
+            // Update Ethereum example calculations  
+            document.querySelector('[onclick*="ethereum, 5000, 1500"]').innerHTML = 
+                `Try Ethereum Example<br><small>$5K at $1.5K → $${ethPrice.toLocaleString()}</small>`;
+        }
+
         // Fetch current price
-        function fetchCurrentPrice() {
+        async function fetchCurrentPrice() {
             const crypto = document.getElementById('cryptoSelect').value;
-            const currentPrice = cryptoData[crypto].price;
-            document.getElementById('sellPrice').value = currentPrice;
             
-            // Show notification
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50';
-            notification.textContent = `Updated to current ${cryptoData[crypto].name} price: $${currentPrice.toLocaleString()}`;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => notification.remove(), 3000);
+            try {
+                // Fetch latest price for this specific crypto
+                const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${crypto}&vs_currencies=usd`);
+                const data = await response.json();
+                
+                if (data[crypto]) {
+                    const currentPrice = data[crypto].usd;
+                    cryptoData[crypto].price = currentPrice;
+                    document.getElementById('sellPrice').value = currentPrice;
+                    
+                    // Show notification
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50';
+                    notification.textContent = `Updated to live ${cryptoData[crypto].name} price: $${currentPrice.toLocaleString()}`;
+                    document.body.appendChild(notification);
+                    
+                    setTimeout(() => notification.remove(), 3000);
+                } else {
+                    throw new Error('Price not found');
+                }
+            } catch (error) {
+                console.warn('Failed to fetch current price:', error);
+                // Fallback to cached price
+                const currentPrice = cryptoData[crypto].price;
+                document.getElementById('sellPrice').value = currentPrice;
+                
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-yellow-600 text-white px-4 py-2 rounded-lg z-50';
+                notification.textContent = `Using cached ${cryptoData[crypto].name} price: $${currentPrice.toLocaleString()}`;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => notification.remove(), 3000);
+            }
         }
 
         // Load example calculation
@@ -553,8 +614,11 @@
         }
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             updatePortfolioTable();
+            
+            // Fetch real-time prices on page load
+            await fetchRealTimePrices();
             
             // Auto-fill current price when crypto is selected
             document.getElementById('cryptoSelect').addEventListener('change', (e) => {
@@ -564,6 +628,9 @@
             
             // Set initial current price
             document.getElementById('sellPrice').value = cryptoData.bitcoin.price;
+            
+            // Update prices every 5 minutes
+            setInterval(fetchRealTimePrices, 5 * 60 * 1000);
         });
     </script>
 </body>

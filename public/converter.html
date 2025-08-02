@@ -398,8 +398,8 @@
     </footer>
 
     <script>
-        // Currency data (simulated real-time prices)
-        const currencyData = {
+        // Currency data with real-time prices
+        let currencyData = {
             // Cryptocurrencies
             bitcoin: { name: 'Bitcoin', symbol: 'BTC', price: 95847, type: 'crypto' },
             ethereum: { name: 'Ethereum', symbol: 'ETH', price: 3247, type: 'crypto' },
@@ -418,6 +418,44 @@
             cad: { name: 'Canadian Dollar', symbol: 'CAD', price: 1.35, type: 'fiat' },
             aud: { name: 'Australian Dollar', symbol: 'AUD', price: 1.48, type: 'fiat' }
         };
+
+        // Fetch real-time crypto prices and fiat rates
+        async function fetchRealTimeRates() {
+            try {
+                // Get crypto prices
+                const cryptos = Object.keys(currencyData).filter(key => currencyData[key].type === 'crypto').join(',');
+                const cryptoResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptos}&vs_currencies=usd&include_24hr_change=true`);
+                const cryptoData = await cryptoResponse.json();
+                
+                // Update crypto prices
+                Object.keys(currencyData).forEach(key => {
+                    if (currencyData[key].type === 'crypto' && cryptoData[key]) {
+                        currencyData[key].price = cryptoData[key].usd;
+                        currencyData[key].change_24h = cryptoData[key].usd_24h_change;
+                    }
+                });
+
+                // Get fiat exchange rates
+                const fiatResponse = await fetch(`https://api.coingecko.com/api/v3/exchange_rates`);
+                const fiatData = await fiatResponse.json();
+                
+                // Update fiat rates
+                if (fiatData.rates) {
+                    if (fiatData.rates.eur) currencyData.eur.price = 1 / fiatData.rates.eur.value;
+                    if (fiatData.rates.gbp) currencyData.gbp.price = 1 / fiatData.rates.gbp.value;
+                    if (fiatData.rates.jpy) currencyData.jpy.price = fiatData.rates.jpy.value;
+                    if (fiatData.rates.cad) currencyData.cad.price = fiatData.rates.cad.value;
+                    if (fiatData.rates.aud) currencyData.aud.price = fiatData.rates.aud.value;
+                }
+                
+                console.log('✅ Real-time rates updated');
+                updateMarketOverview();
+                updatePriceDisplay();
+                convert();
+            } catch (error) {
+                console.warn('⚠️ Failed to fetch real-time rates, using cached data:', error);
+            }
+        }
 
         // Conversion history
         let conversionHistory = JSON.parse(localStorage.getItem('conversionHistory')) || [];
@@ -563,8 +601,31 @@
             updateHistoryDisplay();
         }
 
+        // Update market overview table with real-time data
+        function updateMarketOverview() {
+            // Update Bitcoin row
+            document.querySelector('tr:nth-child(1) td:nth-child(2)').textContent = 
+                `$${currencyData.bitcoin.price.toLocaleString()}`;
+            
+            // Update Ethereum row  
+            document.querySelector('tr:nth-child(2) td:nth-child(2)').textContent = 
+                `$${currencyData.ethereum.price.toLocaleString()}`;
+                
+            // Update Solana row
+            document.querySelector('tr:nth-child(3) td:nth-child(2)').textContent = 
+                `$${currencyData.solana.price.toLocaleString()}`;
+                
+            // Update popular conversion examples
+            document.querySelector('.rate-card:nth-child(1) .text-green-400').textContent = 
+                `$${currencyData.bitcoin.price.toLocaleString()}`;
+            document.querySelector('.rate-card:nth-child(2) .text-green-400').textContent = 
+                `$${currencyData.ethereum.price.toLocaleString()}`;
+            document.querySelector('.rate-card:nth-child(3) .text-green-400').textContent = 
+                `${(currencyData.bitcoin.price / currencyData.ethereum.price).toFixed(2)}`;
+        }
+
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             // Set up event listeners
             document.getElementById('fromAmount').addEventListener('input', convert);
             document.getElementById('fromCurrency').addEventListener('change', () => {
@@ -576,24 +637,16 @@
                 convert();
             });
 
+            // Fetch real-time rates on page load
+            await fetchRealTimeRates();
+
             // Initial setup
             updatePriceDisplay();
             convert();
             updateHistoryDisplay();
 
-            // Simulate price updates every 30 seconds
-            setInterval(() => {
-                // Small random price fluctuations
-                Object.keys(currencyData).forEach(key => {
-                    if (currencyData[key].type === 'crypto') {
-                        const variation = (Math.random() - 0.5) * 0.02; // ±1% variation
-                        currencyData[key].price *= (1 + variation);
-                    }
-                });
-                
-                updatePriceDisplay();
-                convert();
-            }, 30000);
+            // Update rates every 2 minutes
+            setInterval(fetchRealTimeRates, 2 * 60 * 1000);
         });
     </script>
 </body>
