@@ -68,6 +68,8 @@ export default async function handler(req, res) {
         return await handleGetConversations(req, res);
       case 'mark-read':
         return await handleMarkMessagesRead(req, res);
+      case 'delete-message':
+        return await handleDeleteDirectMessage(req, res);
       case 'search-users':
         return await handleSearchUsers(req, res);
       case 'health':
@@ -819,7 +821,8 @@ async function handleGetDirectMessages(req, res) {
         OR: [
           { senderId: decoded.id, receiverId: otherUserId },
           { senderId: otherUserId, receiverId: decoded.id }
-        ]
+        ],
+        isDeleted: false
       },
       orderBy: { createdAt: 'desc' },
       take: Math.min(parseInt(limit), 100),
@@ -943,6 +946,53 @@ async function handleMarkMessagesRead(req, res) {
   } catch (error) {
     console.error('Error marking messages as read:', error);
     return res.status(500).json({ error: 'Failed to mark messages as read' });
+  }
+}
+
+async function handleDeleteDirectMessage(req, res) {
+  if (req.method !== 'DELETE') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  try {
+    const decoded = authenticateToken(req);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const { messageId } = req.query;
+    if (!messageId) {
+      return res.status(400).json({ error: 'Message ID is required' });
+    }
+    // Get the message to verify ownership
+    const message = await prisma.directMessage.findUnique({
+      where: { id: parseInt(messageId) },
+      select: {
+        id: true,
+        senderId: true,
+        isDeleted: true
+      }
+    });
+    if (!message || message.isDeleted) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    // Check if user owns the message
+    if (message.senderId !== decoded.id) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+    // Soft delete the message
+    await prisma.directMessage.update({
+      where: { id: parseInt(messageId) },
+      data: {
+        isDeleted: true,
+        updatedAt: new Date()
+      }
+    });
+    return res.status(200).json({
+      success: true,
+      message: 'Message deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting direct message:', error);
+    return res.status(500).json({ error: 'Failed to delete message' });
   }
 }
 
