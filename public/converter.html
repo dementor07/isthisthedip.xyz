@@ -119,24 +119,7 @@
                         <!-- Currency Selection -->
                         <div>
                             <select id="fromCurrency" class="w-full px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center">
-                                <optgroup label="Cryptocurrencies">
-                                    <option value="bitcoin">Bitcoin (BTC)</option>
-                                    <option value="ethereum">Ethereum (ETH)</option>
-                                    <option value="solana">Solana (SOL)</option>
-                                    <option value="cardano">Cardano (ADA)</option>
-                                    <option value="dogecoin">Dogecoin (DOGE)</option>
-                                    <option value="polygon">Polygon (MATIC)</option>
-                                    <option value="chainlink">Chainlink (LINK)</option>
-                                    <option value="avalanche">Avalanche (AVAX)</option>
-                                </optgroup>
-                                <optgroup label="Fiat Currencies">
-                                    <option value="usd">US Dollar (USD)</option>
-                                    <option value="eur">Euro (EUR)</option>
-                                    <option value="gbp">British Pound (GBP)</option>
-                                    <option value="jpy">Japanese Yen (JPY)</option>
-                                    <option value="cad">Canadian Dollar (CAD)</option>
-                                    <option value="aud">Australian Dollar (AUD)</option>
-                                </optgroup>
+                                <option value="">Loading currencies...</option>
                             </select>
                         </div>
 
@@ -167,24 +150,7 @@
                         <!-- Currency Selection -->
                         <div>
                             <select id="toCurrency" class="w-full px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center">
-                                <optgroup label="Fiat Currencies">
-                                    <option value="usd" selected>US Dollar (USD)</option>
-                                    <option value="eur">Euro (EUR)</option>
-                                    <option value="gbp">British Pound (GBP)</option>
-                                    <option value="jpy">Japanese Yen (JPY)</option>
-                                    <option value="cad">Canadian Dollar (CAD)</option>
-                                    <option value="aud">Australian Dollar (AUD)</option>
-                                </optgroup>
-                                <optgroup label="Cryptocurrencies">
-                                    <option value="bitcoin">Bitcoin (BTC)</option>
-                                    <option value="ethereum">Ethereum (ETH)</option>
-                                    <option value="solana">Solana (SOL)</option>
-                                    <option value="cardano">Cardano (ADA)</option>
-                                    <option value="dogecoin">Dogecoin (DOGE)</option>
-                                    <option value="polygon">Polygon (MATIC)</option>
-                                    <option value="chainlink">Chainlink (LINK)</option>
-                                    <option value="avalanche">Avalanche (AVAX)</option>
-                                </optgroup>
+                                <option value="">Loading currencies...</option>
                             </select>
                         </div>
 
@@ -398,57 +364,184 @@
     </footer>
 
     <script>
-        // Currency data with real-time prices
-        let currencyData = {
-            // Cryptocurrencies
-            bitcoin: { name: 'Bitcoin', symbol: 'BTC', price: 95847, type: 'crypto' },
-            ethereum: { name: 'Ethereum', symbol: 'ETH', price: 3247, type: 'crypto' },
-            solana: { name: 'Solana', symbol: 'SOL', price: 189, type: 'crypto' },
-            cardano: { name: 'Cardano', symbol: 'ADA', price: 0.87, type: 'crypto' },
-            dogecoin: { name: 'Dogecoin', symbol: 'DOGE', price: 0.32, type: 'crypto' },
-            polygon: { name: 'Polygon', symbol: 'MATIC', price: 1.05, type: 'crypto' },
-            chainlink: { name: 'Chainlink', symbol: 'LINK', price: 22.45, type: 'crypto' },
-            avalanche: { name: 'Avalanche', symbol: 'AVAX', price: 38.92, type: 'crypto' },
+        // Currency data with real-time prices - will be populated dynamically
+        let currencyData = {};
+        let availableCryptos = [];
+        let availableFiats = [];
+
+        // Load comprehensive currency lists
+        async function loadCurrencyLists() {
+            try {
+                // Load top 500 cryptocurrencies
+                const cryptoResponse = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1');
+                const cryptoPage1 = await cryptoResponse.json();
+                
+                const cryptoResponse2 = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=2');
+                const cryptoPage2 = await cryptoResponse2.json();
+                
+                const allCryptos = [...cryptoPage1, ...cryptoPage2];
+                
+                // Process cryptocurrencies
+                availableCryptos = allCryptos.map(coin => ({
+                    id: coin.id,
+                    symbol: coin.symbol.toUpperCase(),
+                    name: coin.name,
+                    price: coin.current_price || 0,
+                    type: 'crypto'
+                }));
+
+                // Load supported fiat currencies
+                const fiatResponse = await fetch('https://api.coingecko.com/api/v3/simple/supported_vs_currencies');
+                const fiatList = await fiatResponse.json();
+                
+                // Major fiat currencies with proper names
+                const fiatNames = {
+                    'usd': 'US Dollar', 'eur': 'Euro', 'gbp': 'British Pound', 'jpy': 'Japanese Yen',
+                    'cad': 'Canadian Dollar', 'aud': 'Australian Dollar', 'chf': 'Swiss Franc', 'cny': 'Chinese Yuan',
+                    'inr': 'Indian Rupee', 'krw': 'South Korean Won', 'brl': 'Brazilian Real', 'rub': 'Russian Ruble',
+                    'mxn': 'Mexican Peso', 'sgd': 'Singapore Dollar', 'hkd': 'Hong Kong Dollar', 'nok': 'Norwegian Krone',
+                    'sek': 'Swedish Krona', 'dkk': 'Danish Krone', 'pln': 'Polish Złoty', 'czk': 'Czech Koruna',
+                    'huf': 'Hungarian Forint', 'ils': 'Israeli Shekel', 'nzd': 'New Zealand Dollar', 'zar': 'South African Rand',
+                    'thb': 'Thai Baht', 'try': 'Turkish Lira', 'aed': 'UAE Dirham', 'sar': 'Saudi Riyal',
+                    'pkr': 'Pakistani Rupee', 'bdt': 'Bangladeshi Taka', 'vnd': 'Vietnamese Dong', 'idr': 'Indonesian Rupiah',
+                    'myr': 'Malaysian Ringgit', 'php': 'Philippine Peso', 'twd': 'Taiwan Dollar', 'clp': 'Chilean Peso',
+                    'cop': 'Colombian Peso', 'pen': 'Peruvian Sol', 'ars': 'Argentine Peso', 'uyu': 'Uruguayan Peso',
+                    'gel': 'Georgian Lari', 'kzt': 'Kazakhstani Tenge', 'uzs': 'Uzbekistani Som', 'azn': 'Azerbaijani Manat',
+                    'amd': 'Armenian Dram', 'byn': 'Belarusian Ruble', 'mdl': 'Moldovan Leu', 'bgn': 'Bulgarian Lev',
+                    'ron': 'Romanian Leu', 'hrk': 'Croatian Kuna', 'rsd': 'Serbian Dinar', 'mkd': 'Macedonian Denar',
+                    'all': 'Albanian Lek', 'bam': 'Bosnia-Herzegovina Mark', 'isk': 'Icelandic Króna'
+                };
+
+                // Process fiat currencies (use first 50 major ones)
+                availableFiats = fiatList.slice(0, 50).map(code => ({
+                    id: code,
+                    symbol: code.toUpperCase(),
+                    name: fiatNames[code] || `${code.toUpperCase()} Currency`,
+                    price: 1, // Will be updated with real rates
+                    type: 'fiat'
+                }));
+
+                // Initialize currency data
+                [...availableCryptos, ...availableFiats].forEach(currency => {
+                    currencyData[currency.id] = currency;
+                });
+
+                console.log(`✅ Loaded ${availableCryptos.length} cryptocurrencies and ${availableFiats.length} fiat currencies`);
+                populateCurrencyDropdowns();
+                
+            } catch (error) {
+                console.error('Failed to load currency lists:', error);
+                // Fallback to basic currencies
+                loadBasicCurrencies();
+            }
+        }
+
+        // Fallback basic currencies if API fails
+        function loadBasicCurrencies() {
+            availableCryptos = [
+                { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', price: 95847, type: 'crypto' },
+                { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', price: 3247, type: 'crypto' },
+                { id: 'solana', symbol: 'SOL', name: 'Solana', price: 189, type: 'crypto' },
+                { id: 'cardano', symbol: 'ADA', name: 'Cardano', price: 0.87, type: 'crypto' },
+                { id: 'dogecoin', symbol: 'DOGE', name: 'Dogecoin', price: 0.32, type: 'crypto' }
+            ];
             
-            // Fiat currencies (rates relative to USD)
-            usd: { name: 'US Dollar', symbol: 'USD', price: 1, type: 'fiat' },
-            eur: { name: 'Euro', symbol: 'EUR', price: 0.92, type: 'fiat' },
-            gbp: { name: 'British Pound', symbol: 'GBP', price: 0.79, type: 'fiat' },
-            jpy: { name: 'Japanese Yen', symbol: 'JPY', price: 150, type: 'fiat' },
-            cad: { name: 'Canadian Dollar', symbol: 'CAD', price: 1.35, type: 'fiat' },
-            aud: { name: 'Australian Dollar', symbol: 'AUD', price: 1.48, type: 'fiat' }
-        };
+            availableFiats = [
+                { id: 'usd', symbol: 'USD', name: 'US Dollar', price: 1, type: 'fiat' },
+                { id: 'eur', symbol: 'EUR', name: 'Euro', price: 0.92, type: 'fiat' },
+                { id: 'gbp', symbol: 'GBP', name: 'British Pound', price: 0.79, type: 'fiat' },
+                { id: 'jpy', symbol: 'JPY', name: 'Japanese Yen', price: 150, type: 'fiat' }
+            ];
+
+            [...availableCryptos, ...availableFiats].forEach(currency => {
+                currencyData[currency.id] = currency;
+            });
+            
+            populateCurrencyDropdowns();
+        }
+
+        // Populate currency dropdowns
+        function populateCurrencyDropdowns() {
+            const fromSelect = document.getElementById('fromCurrency');
+            const toSelect = document.getElementById('toCurrency');
+
+            // Clear existing options
+            fromSelect.innerHTML = '';
+            toSelect.innerHTML = '';
+
+            // Add cryptocurrencies
+            if (availableCryptos.length > 0) {
+                const cryptoGroup = document.createElement('optgroup');
+                cryptoGroup.label = `Cryptocurrencies (${availableCryptos.length})`;
+                
+                availableCryptos.forEach(crypto => {
+                    const option = document.createElement('option');
+                    option.value = crypto.id;
+                    option.textContent = `${crypto.name} (${crypto.symbol})`;
+                    cryptoGroup.appendChild(option);
+                });
+                
+                fromSelect.appendChild(cryptoGroup.cloneNode(true));
+                toSelect.appendChild(cryptoGroup);
+            }
+
+            // Add fiat currencies
+            if (availableFiats.length > 0) {
+                const fiatGroup = document.createElement('optgroup');
+                fiatGroup.label = `Fiat Currencies (${availableFiats.length})`;
+                
+                availableFiats.forEach(fiat => {
+                    const option = document.createElement('option');
+                    option.value = fiat.id;
+                    option.textContent = `${fiat.name} (${fiat.symbol})`;
+                    fiatGroup.appendChild(option);
+                });
+                
+                fromSelect.appendChild(fiatGroup.cloneNode(true));
+                toSelect.appendChild(fiatGroup);
+            }
+
+            // Set default selections
+            fromSelect.value = 'bitcoin';
+            toSelect.value = 'usd';
+        }
 
         // Fetch real-time crypto prices and fiat rates
         async function fetchRealTimeRates() {
             try {
-                // Get crypto prices in multiple currencies
-                const cryptos = Object.keys(currencyData).filter(key => currencyData[key].type === 'crypto').join(',');
-                const cryptoResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptos}&vs_currencies=usd,eur,gbp,jpy,cad,aud&include_24hr_change=true`);
+                if (availableCryptos.length === 0) return; // Wait for currencies to load
+                
+                // Get crypto prices in multiple currencies (first 100 for API limits)
+                const cryptosToUpdate = availableCryptos.slice(0, 100).map(c => c.id).join(',');
+                const fiatCurrencies = availableFiats.slice(0, 20).map(f => f.id).join(','); // Top 20 fiat currencies
+                
+                const cryptoResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptosToUpdate}&vs_currencies=${fiatCurrencies}&include_24hr_change=true`);
                 const cryptoData = await cryptoResponse.json();
                 
                 // Update crypto prices
-                Object.keys(currencyData).forEach(key => {
-                    if (currencyData[key].type === 'crypto' && cryptoData[key]) {
-                        currencyData[key].price = cryptoData[key].usd;
-                        currencyData[key].change_24h = cryptoData[key].usd_24h_change;
+                availableCryptos.forEach(crypto => {
+                    if (cryptoData[crypto.id]) {
+                        currencyData[crypto.id].price = cryptoData[crypto.id].usd || 0;
+                        currencyData[crypto.id].change_24h = cryptoData[crypto.id].usd_24h_change || 0;
                         // Store all currency prices for accurate conversions
-                        currencyData[key].prices = cryptoData[key];
+                        currencyData[crypto.id].prices = cryptoData[crypto.id];
                     }
                 });
 
                 // Update fiat rates using Bitcoin as reference (more reliable)
                 if (cryptoData.bitcoin) {
                     const btcPrices = cryptoData.bitcoin;
-                    currencyData.usd.price = 1; // USD base
-                    currencyData.eur.price = btcPrices.eur / btcPrices.usd; // Correct EUR to USD rate
-                    currencyData.gbp.price = btcPrices.gbp / btcPrices.usd; // Correct GBP to USD rate  
-                    currencyData.jpy.price = btcPrices.jpy / btcPrices.usd; // Correct JPY to USD rate
-                    currencyData.cad.price = btcPrices.cad / btcPrices.usd; // Correct CAD to USD rate
-                    currencyData.aud.price = btcPrices.aud / btcPrices.usd; // Correct AUD to USD rate
+                    availableFiats.forEach(fiat => {
+                        if (fiat.id === 'usd') {
+                            currencyData[fiat.id].price = 1; // USD base
+                        } else if (btcPrices[fiat.id]) {
+                            // Correct exchange rate calculation: fiat_price / usd_price
+                            currencyData[fiat.id].price = btcPrices[fiat.id] / btcPrices.usd;
+                        }
+                    });
                 }
                 
-                console.log('✅ Real-time rates updated with multi-currency support');
+                console.log(`✅ Real-time rates updated for ${availableCryptos.length} cryptos and ${availableFiats.length} fiat currencies`);
                 updateMarketOverview();
                 updatePriceDisplay();
                 convert();
@@ -653,6 +746,9 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
+            // Load comprehensive currency lists first
+            await loadCurrencyLists();
+            
             // Set up event listeners
             document.getElementById('fromAmount').addEventListener('input', convert);
             document.getElementById('fromCurrency').addEventListener('change', () => {
