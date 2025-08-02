@@ -504,8 +504,19 @@
                 const usdValue = fromAmount * currencyData[fromCurrency].price;
                 convertedAmount = usdValue / currencyData[toCurrency].price;
             } else {
-                // Fiat to fiat - use exchange rates
-                convertedAmount = fromAmount * currencyData[fromCurrency].price / currencyData[toCurrency].price;
+                // Fiat to fiat - convert through USD
+                // currencyData[x].price = how many X you get for 1 USD (X per USD rate)
+                if (fromCurrency === 'usd') {
+                    // USD to other fiat
+                    convertedAmount = fromAmount * currencyData[toCurrency].price;
+                } else if (toCurrency === 'usd') {
+                    // Other fiat to USD
+                    convertedAmount = fromAmount / currencyData[fromCurrency].price;
+                } else {
+                    // Other fiat to other fiat - convert through USD
+                    const usdValue = fromAmount / currencyData[fromCurrency].price;
+                    convertedAmount = usdValue * currencyData[toCurrency].price;
+                }
             }
 
             // Display result
