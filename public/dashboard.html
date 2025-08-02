@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -304,6 +305,8 @@
     <script src="/js/auth.js"></script>
     <script src="/js/realtime-service.js"></script>
     <script src="/js/pro-charts.js"></script>
+    <script src="/js/exchange-websockets.js"></script>
+    <script src="/js/realtime-analyzer.js"></script>
     
     <script>
         class Dashboard {
@@ -336,11 +339,58 @@
                         this.updateStats(data.stats);
                         this.updateSubscriptionInfo(data.user);
                         this.updateRecentSearches(data.recentSearches);
+                        this.initializeAdvancedFeatures(data.user);
                     } else {
                         console.error('Failed to load dashboard data');
                     }
                 } catch (error) {
                     console.error('Dashboard data error:', error);
+                }
+            }
+
+            initializeAdvancedFeatures(user) {
+                // Initialize real-time service based on user tier
+                if (window.realTimeService && user) {
+                    window.realTimeService.subscribe((update) => {
+                        if (update.type === 'market_update') {
+                            this.updateMarketData(update.data);
+                        }
+                    });
+                    
+                    window.realTimeService.start(user.tier);
+                    console.log(`✅ Real-time service started for ${user.tier} user`);
+                }
+
+                // Show/hide premium features based on user tier
+                const premiumFeatures = document.querySelector('.premium-feature');
+                const upgradePrompt = document.querySelector('.upgrade-prompt');
+                
+                if (user.tier === 'premium' || user.tier === 'pro') {
+                    if (premiumFeatures) premiumFeatures.classList.remove('hidden');
+                    if (upgradePrompt) upgradePrompt.classList.add('hidden');
+                } else {
+                    if (premiumFeatures) premiumFeatures.classList.add('hidden');
+                    if (upgradePrompt) upgradePrompt.classList.remove('hidden');
+                }
+            }
+
+            updateMarketData(marketData) {
+                // Update Fear & Greed index in dashboard
+                if (marketData.fearGreed) {
+                    const fgElement = document.getElementById('dashboardFearGreed');
+                    if (fgElement) {
+                        fgElement.textContent = `${marketData.fearGreed.value}/100 (${marketData.fearGreed.classification})`;
+                    }
+                }
+
+                // Update market trend
+                if (marketData.topCoins && marketData.topCoins.length > 0) {
+                    const avgChange = marketData.topCoins.reduce((sum, coin) => sum + (coin.change_24h || 0), 0) / marketData.topCoins.length;
+                    const trendElement = document.getElementById('marketTrend');
+                    if (trendElement) {
+                        trendElement.textContent = avgChange > 0 ? '↗ Bullish' : '↘ Bearish';
+                        trendElement.className = avgChange > 0 ? 'text-green-400' : 'text-red-400';
+                    }
                 }
             }
 

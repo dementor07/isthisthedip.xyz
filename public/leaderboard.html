@@ -215,6 +215,7 @@
 
     <!-- Load JavaScript -->
     <script src="/js/auth.js"></script>
+    <script src="/js/realtime-service.js"></script>
     <script>
         class LeaderboardManager {
             constructor() {
@@ -226,6 +227,7 @@
                 this.setupEventListeners();
                 await this.loadLeaderboard();
                 this.startAutoRefresh();
+                this.initializeRealTimeUpdates();
             }
 
             setupEventListeners() {
@@ -393,6 +395,41 @@
                 setInterval(() => {
                     this.loadLeaderboard();
                 }, 120000);
+            }
+
+            initializeRealTimeUpdates() {
+                // Start real-time service if available
+                if (window.realTimeService) {
+                    // Get user tier from auth manager
+                    const userTier = authManager.user?.tier || 'free';
+                    
+                    // Subscribe to real-time market updates
+                    window.realTimeService.subscribe((update) => {
+                        if (update.type === 'market_update') {
+                            this.updatePricesFromRealTimeData(update.data);
+                        }
+                    });
+                    
+                    // Start real-time service
+                    window.realTimeService.start(userTier);
+                    console.log('✅ Real-time updates enabled for leaderboard');
+                }
+            }
+
+            updatePricesFromRealTimeData(marketData) {
+                // Update fear & greed index
+                if (marketData.fearGreed) {
+                    const fgElements = document.querySelectorAll('#fearGreedIndex, #fearGreedIndexMobile');
+                    fgElements.forEach(el => {
+                        if (el) el.textContent = `${marketData.fearGreed.value}/100`;
+                    });
+                }
+
+                // Update top coins data if available
+                if (marketData.topCoins && Array.isArray(marketData.topCoins)) {
+                    // Could update live prices in leaderboard here
+                    console.log('📊 Received live market data for', marketData.topCoins.length, 'coins');
+                }
             }
         }
 

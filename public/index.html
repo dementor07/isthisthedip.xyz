@@ -245,6 +245,64 @@
                             </p>
                         </div>
                     </div>
+
+                    <!-- Pro Charts Section (Pro Users Only) -->
+                    <div id="proChartsSection" class="hidden">
+                        <div class="bg-gray-800 rounded-xl p-6 mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-bold">🔬 Professional Analysis</h3>
+                                <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">PRO</span>
+                            </div>
+                            <div id="proChartsContainer">
+                                <!-- Pro charts will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pro Features Preview (Free/Premium Users) -->
+                    <div id="proFeaturesPreview" class="hidden">
+                        <div class="bg-gradient-to-r from-purple-900 to-blue-900 rounded-xl p-6 mb-6 border border-purple-600">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-bold">🚀 Unlock Professional Analysis</h3>
+                                <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">PRO ONLY</span>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                                <div class="space-y-3">
+                                    <div class="flex items-center text-sm">
+                                        <span class="text-green-400 mr-2">✓</span>
+                                        <span>Real-time charts with 5-second updates</span>
+                                    </div>
+                                    <div class="flex items-center text-sm">
+                                        <span class="text-green-400 mr-2">✓</span>
+                                        <span>Technical indicators (RSI, MACD, Moving Averages)</span>
+                                    </div>
+                                    <div class="flex items-center text-sm">
+                                        <span class="text-green-400 mr-2">✓</span>
+                                        <span>Volume analysis and correlation charts</span>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center text-sm">
+                                        <span class="text-green-400 mr-2">✓</span>
+                                        <span>Market opportunity heat maps</span>
+                                    </div>
+                                    <div class="flex items-center text-sm">
+                                        <span class="text-green-400 mr-2">✓</span>
+                                        <span>Multi-exchange WebSocket connections</span>
+                                    </div>
+                                    <div class="flex items-center text-sm">
+                                        <span class="text-green-400 mr-2">✓</span>
+                                        <span>Professional portfolio analysis tools</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <a href="/pricing" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                                    Upgrade to Pro - Unlock Advanced Features
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -292,6 +350,64 @@
     <script src="/js/calculator.js"></script>
     
     <script>
+        // Pro Charts Integration
+        function initializeProChartsIntegration() {
+            // Override the showResults function to include Pro charts
+            if (window.calculator && window.proChartsManager) {
+                const originalShowResults = window.calculator.showResults;
+                
+                window.calculator.showResults = function(data) {
+                    // Call original function first
+                    if (originalShowResults) {
+                        originalShowResults.call(this, data);
+                    }
+                    
+                    // Check if user is Pro tier
+                    const user = authManager?.user;
+                    if (user && user.tier === 'pro') {
+                        setTimeout(() => {
+                            showProChartsForAnalysis(data);
+                        }, 500); // Small delay to ensure results are shown first
+                    } else if (user && (user.tier === 'free' || user.tier === 'premium')) {
+                        setTimeout(() => {
+                            showProFeaturesPreview();
+                        }, 500);
+                    }
+                };
+            }
+        }
+        
+        function showProChartsForAnalysis(analysisData) {
+            const proSection = document.getElementById('proChartsSection');
+            const proContainer = document.getElementById('proChartsContainer');
+            
+            if (proSection && proContainer && window.proChartsManager) {
+                // Show the Pro charts section
+                proSection.classList.remove('hidden');
+                
+                // Initialize Pro charts with analysis data
+                try {
+                    window.proChartsManager.initializeProCharts('proChartsContainer', analysisData);
+                    console.log('✅ Pro charts initialized for analysis');
+                } catch (error) {
+                    console.error('❌ Failed to initialize Pro charts:', error);
+                }
+            }
+        }
+
+        function showProFeaturesPreview() {
+            const previewSection = document.getElementById('proFeaturesPreview');
+            if (previewSection) {
+                previewSection.classList.remove('hidden');
+                console.log('💡 Showing Pro features preview to encourage upgrade');
+            }
+        }
+        
+        // Initialize Pro charts integration when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initializeProChartsIntegration, 1000); // Wait for all modules to load
+        });
+
         // Update Fear & Greed Index on load
         async function updateFearGreed() {
             try {
