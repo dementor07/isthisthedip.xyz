@@ -746,19 +746,18 @@ async function handleSendDirectMessage(req, res) {
       return res.status(400).json({ error: 'Message too long (max 2000 characters)' });
     }
 
-    // Check if receiver exists and is public
+    // Check if receiver exists
     const receiver = await prisma.user.findUnique({
       where: { id: parseInt(receiverId) },
-      select: { id: true, isPublic: true }
+      select: { id: true }
     });
 
     if (!receiver) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (!receiver.isPublic) {
-      return res.status(403).json({ error: 'User is not accepting messages' });
-    }
+    // Note: Removed isPublic check to allow messaging between all users
+    // This matches the behavior from stable-mobile-optimized branch
 
     // Create message
     const directMessage = await prisma.directMessage.create({
