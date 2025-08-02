@@ -668,9 +668,27 @@
             try {
                 if (availableCryptos.length === 0) return; // Wait for currencies to load
                 
-                // Get crypto prices in multiple currencies (first 100 for API limits)
+                // Fetch crypto prices and fiat exchange rates in parallel
+                const [cryptoRates, fiatRates] = await Promise.all([
+                    fetchCryptoRates(),
+                    fetchFiatExchangeRates()
+                ]);
+                
+                console.log(`✅ Real-time rates updated for ${availableCryptos.length} cryptos and ${availableFiats.length} fiat currencies`);
+                updateMarketOverview();
+                updatePriceDisplay();
+                convert();
+            } catch (error) {
+                console.warn('⚠️ Failed to fetch real-time rates, using cached data:', error);
+            }
+        }
+
+        // Fetch cryptocurrency rates from CoinGecko
+        async function fetchCryptoRates() {
+            try {
+                // Get crypto prices (first 100 for API limits)
                 const cryptosToUpdate = availableCryptos.slice(0, 100).map(c => c.id).join(',');
-                const fiatCurrencies = availableFiats.slice(0, 20).map(f => f.id).join(','); // Top 20 fiat currencies
+                const fiatCurrencies = 'usd,eur,gbp,jpy,cad,aud,chf,cny,inr,krw'; // Major currencies for crypto pricing
                 
                 const cryptoResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptosToUpdate}&vs_currencies=${fiatCurrencies}&include_24hr_change=true`);
                 const cryptoData = await cryptoResponse.json();
@@ -684,10 +702,54 @@
                         currencyData[crypto.id].prices = cryptoData[crypto.id];
                     }
                 });
+                
+                return cryptoData;
+            } catch (error) {
+                console.error('Failed to fetch crypto rates:', error);
+                return {};
+            }
+        }
 
-                // Update fiat rates using Bitcoin as reference (more reliable)
-                if (cryptoData.bitcoin) {
-                    const btcPrices = cryptoData.bitcoin;
+        // Fetch fiat exchange rates from exchangerate-api.com (free tier)
+        async function fetchFiatExchangeRates() {
+            try {
+                // Using exchangerate-api.com which provides accurate fiat exchange rates
+                const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+                const exchangeData = await response.json();
+                
+                if (exchangeData.rates) {
+                    // Update fiat currency rates
+                    availableFiats.forEach(fiat => {
+                        if (fiat.id === 'usd') {
+                            currencyData[fiat.id].price = 1; // USD base
+                        } else {
+                            const rate = exchangeData.rates[fiat.id.toUpperCase()];
+                            if (rate) {
+                                // Rate represents how many units of fiat currency = 1 USD
+                                currencyData[fiat.id].price = rate;
+                            }
+                        }
+                    });
+                    
+                    console.log('✅ Fiat exchange rates updated from exchangerate-api.com');
+                }
+                
+                return exchangeData;
+            } catch (error) {
+                console.warn('Failed to fetch fiat exchange rates, using CoinGecko fallback:', error);
+                // Fallback to CoinGecko method
+                return await fetchFiatRatesFromCoinGecko();
+            }
+        }
+
+        // Fallback fiat rate fetching using CoinGecko Bitcoin prices
+        async function fetchFiatRatesFromCoinGecko() {
+            try {
+                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,eur,gbp,jpy,cad,aud,chf,cny,inr,krw,brl,rub,mxn,sgd,hkd,nok,sek,dkk,pln,czk&include_24hr_change=true');
+                const data = await response.json();
+                
+                if (data.bitcoin) {
+                    const btcPrices = data.bitcoin;
                     availableFiats.forEach(fiat => {
                         if (fiat.id === 'usd') {
                             currencyData[fiat.id].price = 1; // USD base
@@ -696,14 +758,14 @@
                             currencyData[fiat.id].price = btcPrices[fiat.id] / btcPrices.usd;
                         }
                     });
+                    
+                    console.log('✅ Fiat rates updated using CoinGecko fallback');
                 }
                 
-                console.log(`✅ Real-time rates updated for ${availableCryptos.length} cryptos and ${availableFiats.length} fiat currencies`);
-                updateMarketOverview();
-                updatePriceDisplay();
-                convert();
+                return data;
             } catch (error) {
-                console.warn('⚠️ Failed to fetch real-time rates, using cached data:', error);
+                console.error('CoinGecko fallback also failed:', error);
+                return {};
             }
         }
 
