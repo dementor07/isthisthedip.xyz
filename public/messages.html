@@ -222,8 +222,13 @@
                     // Check if there's a specific user to message from URL
                     const urlParams = new URLSearchParams(window.location.search);
                     const userId = urlParams.get('user');
+                    console.log('🔍 URL params:', window.location.search);
+                    console.log('🔍 Extracted userId:', userId);
                     if (userId) {
+                        console.log('🚀 Starting conversation with user ID:', userId);
                         await this.startNewConversation(parseInt(userId));
+                    } else {
+                        console.log('❌ No userId found in URL');
                     }
                     
                     console.log('✅ Direct messaging app initialized');
@@ -319,17 +324,24 @@
             }
 
             async selectConversation(userId) {
+                console.log('🎯 selectConversation called with userId:', userId);
                 this.selectedConversation = this.conversations.find(c => c.other_user_id === parseInt(userId));
+                console.log('🔍 Found existing conversation:', this.selectedConversation);
+                
                 if (!this.selectedConversation) {
+                    console.log('🌐 Fetching user profile for new conversation...');
                     // Fetch user information for new conversation
                     try {
                         const response = await fetch(`/api/auth?action=profile&userId=${userId}`, {
                             credentials: 'include'
                         });
                         
+                        console.log('📡 Profile API response status:', response.status);
+                        
                         if (response.ok) {
                             const data = await response.json();
                             const user = data.user;
+                            console.log('👤 Fetched user data:', user);
                             this.selectedConversation = {
                                 other_user_id: parseInt(userId),
                                 display_name: user.displayName || user.username || 'User',
@@ -338,7 +350,9 @@
                                 bio: user.bio,
                                 tier: user.tier
                             };
+                            console.log('✅ Created conversation object:', this.selectedConversation);
                         } else {
+                            console.log('❌ Profile fetch failed, using fallback');
                             // Fallback to generic data if profile fetch fails
                             this.selectedConversation = {
                                 other_user_id: parseInt(userId),
@@ -359,12 +373,17 @@
                     }
                 }
                 
+                console.log('🔄 Updating UI...');
                 this.renderConversations(); // Update active state
                 await this.loadMessages(userId);
                 this.showChatInterface();
+                console.log('✅ Conversation selection complete');
             }
 
             showChatInterface() {
+                console.log('🖥️ showChatInterface called');
+                console.log('📝 Current selectedConversation:', this.selectedConversation);
+                
                 document.getElementById('welcome-screen').classList.add('hidden');
                 document.getElementById('chat-header').classList.remove('hidden');
                 document.getElementById('messages-container').classList.remove('hidden');
@@ -372,6 +391,7 @@
                 
                 // Update chat header
                 const displayName = this.selectedConversation.display_name || this.selectedConversation.username || 'Anonymous';
+                console.log('🏷️ Setting display name to:', displayName);
                 document.getElementById('chat-username').textContent = displayName;
                 
                 const avatar = document.getElementById('chat-avatar');
@@ -566,12 +586,15 @@
             }
 
             async startNewConversation(userId) {
+                console.log('📞 startNewConversation called with userId:', userId);
                 // Check if conversation already exists
                 const existing = this.conversations.find(c => c.other_user_id === userId);
+                console.log('🔍 Existing conversation found:', existing);
                 if (existing) {
+                    console.log('✅ Using existing conversation');
                     await this.selectConversation(userId);
                 } else {
-                    // Create new conversation entry
+                    console.log('🆕 Creating new conversation');
                     await this.selectConversation(userId);
                 }
             }
