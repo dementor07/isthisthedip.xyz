@@ -186,11 +186,15 @@
             constructor() {
                 this.currentUser = null;
                 this.messages = [];
+                this.messageCache = new Map();
+                this.lastMessageId = 0;
                 this.isInitialized = false;
                 this.pollingInterval = null;
+                this.cachedStats = null;
+                this.lastStatsUpdate = 0;
                 // Using existing auth API endpoints for chat functionality
                 
-                console.log('🚀 Initializing IsThisTheDipChat...');
+                console.log('🚀 Initializing IsThisTheDipChat with performance optimizations...');
                 this.init();
             }
 
@@ -284,6 +288,15 @@
                     if (response.ok) {
                         const data = await response.json();
                         this.messages = data.messages || [];
+                        
+                        // Cache messages and update last message ID
+                        this.messages.forEach(msg => {
+                            this.messageCache.set(msg.id, msg);
+                            if (msg.id > this.lastMessageId) {
+                                this.lastMessageId = msg.id;
+                            }
+                        });
+                        
                         console.log(`✅ Loaded ${this.messages.length} messages`);
                         this.renderMessages();
                     } else {
@@ -294,6 +307,50 @@
                     this.showFallbackMessages();
                 } finally {
                     this.hideLoadingIndicator();
+                }
+            }
+
+            async loadNewMessages() {
+                try {
+                    // Only load messages newer than our last known message
+                    const response = await fetch(`/api/auth?action=chat-messages&limit=10&after=${this.lastMessageId}`, {
+                        method: 'GET',
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const newMessages = data.messages || [];
+                        
+                        if (newMessages.length > 0) {
+                            console.log(`📥 Loaded ${newMessages.length} new messages`);
+                            
+                            // Add new messages to cache and array
+                            newMessages.forEach(msg => {
+                                this.messageCache.set(msg.id, msg);
+                                this.messages.push(msg);
+                                if (msg.id > this.lastMessageId) {
+                                    this.lastMessageId = msg.id;
+                                }
+                            });
+                            
+                            // Keep only last 50 messages for performance
+                            if (this.messages.length > 50) {
+                                this.messages = this.messages.slice(-50);
+                            }
+                            
+                            this.renderNewMessages(newMessages);
+                        }
+                        
+                        // Update stats less frequently (every 2 minutes)
+                        const now = Date.now();
+                        if (now - this.lastStatsUpdate > 120000) {
+                            await this.loadStats();
+                            this.lastStatsUpdate = now;
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Failed to load new messages:', error);
                 }
             }
 
@@ -321,6 +378,13 @@
 
             async loadStats() {
                 try {
+                    // Use cached stats if recent (within 1 minute)
+                    const now = Date.now();
+                    if (this.cachedStats && (now - this.lastStatsUpdate < 60000)) {
+                        this.updateStatsUI(this.cachedStats);
+                        return;
+                    }
+
                     const response = await fetch('/api/auth?action=chat-stats', {
                         method: 'GET',
                         credentials: 'include'
@@ -328,22 +392,27 @@
                     
                     if (response.ok) {
                         const data = await response.json();
-                        const stats = data.stats;
-                        this.updateStatsUI(stats);
+                        this.cachedStats = data.stats;
+                        this.lastStatsUpdate = now;
+                        this.updateStatsUI(this.cachedStats);
                     } else {
-                        this.updateStatsUI({
+                        const fallbackStats = {
                             totalMessages: 127,
                             activeUsers: 23,
                             onlineNow: 7
-                        });
+                        };
+                        this.cachedStats = fallbackStats;
+                        this.updateStatsUI(fallbackStats);
                     }
                 } catch (error) {
                     console.error('❌ Failed to load stats:', error);
-                    this.updateStatsUI({
+                    const fallbackStats = {
                         totalMessages: 127,
                         activeUsers: 23,
                         onlineNow: 7
-                    });
+                    };
+                    this.cachedStats = fallbackStats;
+                    this.updateStatsUI(fallbackStats);
                 }
             }
 
@@ -379,10 +448,46 @@
                 
                 noMessages.classList.add('hidden');
                 
-                const messagesHTML = this.messages.map(message => this.renderMessage(message)).join('');
-                container.innerHTML = messagesHTML;
+                // Use DocumentFragment for better performance
+                const fragment = document.createDocumentFragment();
+                this.messages.forEach(message => {
+                    const messageElement = this.createMessageElement(message);
+                    fragment.appendChild(messageElement);
+                });
                 
-                // Scroll to bottom
+                container.innerHTML = '';
+                container.appendChild(fragment);
+                
+                this.scrollToBottom();
+            }
+
+            renderNewMessages(newMessages) {
+                const container = document.getElementById('messages-list');
+                
+                if (!container || newMessages.length === 0) {
+                    return;
+                }
+                
+                // Use DocumentFragment for better performance
+                const fragment = document.createDocumentFragment();
+                newMessages.forEach(message => {
+                    const messageElement = this.createMessageElement(message);
+                    fragment.appendChild(messageElement);
+                });
+                
+                container.appendChild(fragment);
+                this.scrollToBottom();
+            }
+
+            createMessageElement(message) {
+                const div = document.createElement('div');
+                div.className = 'message-item border border-gray-200 rounded-lg p-4';
+                div.setAttribute('data-message-id', message.id);
+                div.innerHTML = this.renderMessage(message);
+                return div;
+            }
+
+            scrollToBottom() {
                 const messagesContainer = document.getElementById('messages-container');
                 if (messagesContainer) {
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -416,21 +521,19 @@
                 const canViewProfile = message.userId && message.userId !== this.currentUser?.id;
                 
                 return `
-                    <div class="message-item border border-gray-200 rounded-lg p-4" data-message-id="${message.id}">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center space-x-2">
-                                <span class="font-medium text-gray-900 cursor-pointer hover:text-blue-600" ${canViewProfile ? `onclick="window.location.href='/profile?id=${message.userId}'"` : ''}>${this.escapeHtml(message.username)}</span>
-                                ${tierBadge}
-                                ${canMessage ? `<button onclick="window.location.href='/messages?user=${message.userId}'" class="text-blue-600 hover:text-blue-800 text-xs font-medium ml-2 px-2 py-1 bg-blue-50 rounded">Message</button>` : ''}
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span class="text-sm text-gray-500">${dateStr} ${timeStr}</span>
-                                ${canViewProfile ? `<button onclick="window.location.href='/profile?id=${message.userId}'" class="text-gray-600 hover:text-gray-800 text-sm">Profile</button>` : ''}
-                                ${canDelete ? `<button onclick="chat.deleteMessage(${message.id})" class="text-red-600 hover:text-red-800 text-sm">Delete</button>` : ''}
-                            </div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-medium text-gray-900 cursor-pointer hover:text-blue-600" ${canViewProfile ? `onclick="window.location.href='/profile?id=${message.userId}'"` : ''}>${this.escapeHtml(message.username)}</span>
+                            ${tierBadge}
+                            ${canMessage ? `<button onclick="window.location.href='/messages?user=${message.userId}'" class="text-blue-600 hover:text-blue-800 text-xs font-medium ml-2 px-2 py-1 bg-blue-50 rounded">Message</button>` : ''}
                         </div>
-                        <p class="text-gray-800 whitespace-pre-wrap">${this.escapeHtml(message.message)}</p>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">${dateStr} ${timeStr}</span>
+                            ${canViewProfile ? `<button onclick="window.location.href='/profile?id=${message.userId}'" class="text-gray-600 hover:text-gray-800 text-sm">Profile</button>` : ''}
+                            ${canDelete ? `<button onclick="chat.deleteMessage(${message.id})" class="text-red-600 hover:text-red-800 text-sm">Delete</button>` : ''}
+                        </div>
                     </div>
+                    <p class="text-gray-800 whitespace-pre-wrap">${this.escapeHtml(message.message)}</p>
                 `;
             }
 
@@ -484,8 +587,7 @@
 
                 if (refreshBtn) {
                     refreshBtn.addEventListener('click', () => {
-                        this.loadMessages();
-                        this.loadStats();
+                        this.debounceRefresh();
                     });
                 }
 
@@ -689,19 +791,18 @@
             }
 
             startPolling() {
-                // Poll for new messages every 15 seconds
+                // Optimized polling: 30 seconds for better performance
                 this.pollingInterval = setInterval(async () => {
                     if (this.isInitialized) {
                         try {
-                            await this.loadMessages();
-                            await this.loadStats();
+                            await this.loadNewMessages();
                         } catch (error) {
                             console.error('❌ Polling failed:', error);
                         }
                     }
-                }, 15000);
+                }, 30000);
                 
-                console.log('⏰ Started polling for updates');
+                console.log('⏰ Started optimized polling for updates');
             }
 
             showError(message) {
@@ -728,6 +829,41 @@
                         notification.parentNode.removeChild(notification);
                     }
                 }, 5000);
+            }
+
+            debounceRefresh() {
+                if (this.refreshTimeout) {
+                    clearTimeout(this.refreshTimeout);
+                }
+                
+                this.refreshTimeout = setTimeout(async () => {
+                    try {
+                        await this.loadMessages();
+                        await this.loadStats();
+                        this.showSuccess('Chat refreshed');
+                    } catch (error) {
+                        this.showError('Failed to refresh chat');
+                    }
+                }, 300);
+            }
+
+            // Optimized message sending with immediate UI feedback
+            async sendMessageOptimized(message) {
+                // Add optimistic message to UI immediately
+                const optimisticMessage = {
+                    id: `temp-${Date.now()}`,
+                    message: message,
+                    username: this.currentUser.email ? this.currentUser.email.split('@')[0] : 'You',
+                    userTier: this.currentUser.tier || 'free',
+                    userId: this.currentUser.id,
+                    timestamp: new Date().toISOString(),
+                    isOptimistic: true
+                };
+                
+                this.messages.push(optimisticMessage);
+                this.renderNewMessages([optimisticMessage]);
+                
+                return optimisticMessage;
             }
         }
 
