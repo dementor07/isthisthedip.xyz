@@ -277,7 +277,10 @@
                     this.conversations = [];
                     this.renderConversations();
                 } finally {
-                    document.getElementById('loading-conversations').classList.add('hidden');
+                    const loadingEl = document.getElementById('loading-conversations');
+                    if (loadingEl) {
+                        loadingEl.classList.add('hidden');
+                    }
                 }
             }
 
