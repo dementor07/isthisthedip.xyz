@@ -34,7 +34,8 @@
 <body class="bg-gray-50 min-h-screen">
     <nav class="bg-white shadow-sm border-b">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
+            <!-- Desktop Navigation -->
+            <div class="hidden md:flex justify-between items-center h-16">
                 <div class="flex items-center">
                     <a href="/" class="text-xl font-bold text-gray-900">isthisthedip.xyz</a>
                     <span class="ml-4 px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full">Community Chat</span>
@@ -53,6 +54,42 @@
                     <button id="logout-btn" class="hidden bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                         Logout
                     </button>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation -->
+            <div class="md:hidden">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <a href="/" class="text-lg font-bold text-gray-900">isthisthedip.xyz</a>
+                        <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">💬 Chat</span>
+                    </div>
+                    <button id="mobileMenuBtn" class="text-gray-700 p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Mobile Menu (Hidden by default) -->
+                <div id="mobileMenu" class="hidden border-t border-gray-200 py-4">
+                    <nav class="flex flex-col space-y-3">
+                        <a href="/" class="text-gray-600 hover:text-gray-900 text-sm font-medium py-2">🏠 Home</a>
+                        <a href="/messages" class="text-gray-600 hover:text-gray-900 text-sm font-medium py-2">💬 Messages</a>
+                        <a href="/profile" class="text-gray-600 hover:text-gray-900 text-sm font-medium py-2">👤 Profile</a>
+                        <a href="/dashboard" class="text-gray-600 hover:text-gray-900 text-sm font-medium py-2">📊 Dashboard</a>
+                        <a href="/leaderboard" class="text-gray-600 hover:text-gray-900 text-sm font-medium py-2">🏆 Leaderboard</a>
+                        <div id="mobile-user-info" class="hidden pt-2 border-t border-gray-200">
+                            <span id="mobile-user-name" class="text-sm text-gray-700 block py-1"></span>
+                            <span id="mobile-user-tier" class="px-2 py-1 text-xs rounded-full inline-block mb-2"></span>
+                        </div>
+                        <button id="mobile-login-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium text-left">
+                            Login
+                        </button>
+                        <button id="mobile-logout-btn" class="hidden bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium text-left">
+                            Logout
+                        </button>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -473,40 +510,64 @@
                 const userTier = document.getElementById('user-tier');
                 const loginBtn = document.getElementById('login-btn');
                 const logoutBtn = document.getElementById('logout-btn');
+                
+                // Mobile elements
+                const mobileUserInfo = document.getElementById('mobile-user-info');
+                const mobileUserName = document.getElementById('mobile-user-name');
+                const mobileUserTier = document.getElementById('mobile-user-tier');
+                const mobileLoginBtn = document.getElementById('mobile-login-btn');
+                const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+                
                 const loginRequired = document.getElementById('login-required');
                 const messageForm = document.getElementById('message-form');
                 const sendBtn = document.getElementById('send-btn');
 
                 if (this.currentUser) {
-                    // User is logged in
+                    // User is logged in - update desktop elements
                     if (userInfo) userInfo.classList.remove('hidden');
                     if (loginBtn) loginBtn.classList.add('hidden');
                     if (logoutBtn) logoutBtn.classList.remove('hidden');
+                    
+                    // Update mobile elements
+                    if (mobileUserInfo) mobileUserInfo.classList.remove('hidden');
+                    if (mobileLoginBtn) mobileLoginBtn.classList.add('hidden');
+                    if (mobileLogoutBtn) mobileLogoutBtn.classList.remove('hidden');
+                    
                     if (loginRequired) loginRequired.classList.add('hidden');
                     if (messageForm) messageForm.classList.remove('hidden');
 
-                    if (userName) {
-                        userName.textContent = this.currentUser.email ? 
-                            this.currentUser.email.split('@')[0] : 'User';
+                    // Update user name for both desktop and mobile
+                    const displayName = this.currentUser.email ? 
+                        this.currentUser.email.split('@')[0] : 'User';
+                    if (userName) userName.textContent = displayName;
+                    if (mobileUserName) mobileUserName.textContent = displayName;
+                    
+                    // Update tier for both desktop and mobile
+                    const tier = this.currentUser.tier || 'free';
+                    const isAdmin = this.currentUser.email && this.currentUser.email.includes('admin');
+                    
+                    let tierText, tierClass;
+                    if (isAdmin) {
+                        tierText = 'ADMIN';
+                        tierClass = 'px-2 py-1 text-xs rounded-full text-white admin-badge';
+                    } else if (tier === 'pro') {
+                        tierText = 'PRO';
+                        tierClass = 'px-2 py-1 text-xs rounded-full text-white pro-badge';
+                    } else if (tier === 'premium') {
+                        tierText = 'PREMIUM';
+                        tierClass = 'px-2 py-1 text-xs rounded-full text-white premium-badge';
+                    } else {
+                        tierText = 'FREE';
+                        tierClass = 'px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-700';
                     }
                     
                     if (userTier) {
-                        const tier = this.currentUser.tier || 'free';
-                        const isAdmin = this.currentUser.email && this.currentUser.email.includes('admin');
-                        
-                        if (isAdmin) {
-                            userTier.textContent = 'ADMIN';
-                            userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white admin-badge';
-                        } else if (tier === 'pro') {
-                            userTier.textContent = 'PRO';
-                            userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white pro-badge';
-                        } else if (tier === 'premium') {
-                            userTier.textContent = 'PREMIUM';
-                            userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full text-white premium-badge';
-                        } else {
-                            userTier.textContent = 'FREE';
-                            userTier.className = 'ml-2 px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-700';
-                        }
+                        userTier.textContent = tierText;
+                        userTier.className = 'ml-2 ' + tierClass;
+                    }
+                    if (mobileUserTier) {
+                        mobileUserTier.textContent = tierText;
+                        mobileUserTier.className = tierClass;
                     }
 
                     // Enable send button if message input has content
@@ -516,10 +577,16 @@
                         sendBtn.disabled = !hasMessage;
                     }
                 } else {
-                    // User is not logged in
+                    // User is not logged in - update desktop elements
                     if (userInfo) userInfo.classList.add('hidden');
                     if (loginBtn) loginBtn.classList.remove('hidden');
                     if (logoutBtn) logoutBtn.classList.add('hidden');
+                    
+                    // Update mobile elements
+                    if (mobileUserInfo) mobileUserInfo.classList.add('hidden');
+                    if (mobileLoginBtn) mobileLoginBtn.classList.remove('hidden');
+                    if (mobileLogoutBtn) mobileLogoutBtn.classList.add('hidden');
+                    
                     if (loginRequired) loginRequired.classList.remove('hidden');
                     if (messageForm) messageForm.classList.add('hidden');
                 }
@@ -666,6 +733,46 @@
 
         // Initialize the chat application
         const chat = new IsThisTheDipChat();
+
+        // Mobile menu functionality
+        function initializeMobileMenu() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+
+                // Close mobile menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!mobileMenuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+
+                // Handle mobile login/logout buttons
+                const mobileLoginBtn = document.getElementById('mobile-login-btn');
+                const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+                const desktopLoginBtn = document.getElementById('login-btn');
+                const desktopLogoutBtn = document.getElementById('logout-btn');
+
+                if (mobileLoginBtn && desktopLoginBtn) {
+                    mobileLoginBtn.addEventListener('click', () => {
+                        window.location.href = '/login';
+                    });
+                }
+
+                if (mobileLogoutBtn && desktopLogoutBtn) {
+                    mobileLogoutBtn.addEventListener('click', () => {
+                        desktopLogoutBtn.click(); // Trigger existing logout functionality
+                    });
+                }
+            }
+        }
+
+        // Initialize mobile menu on page load
+        document.addEventListener('DOMContentLoaded', initializeMobileMenu);
     </script>
 </body>
 </html>
