@@ -441,11 +441,11 @@
                 if (cryptoData.bitcoin) {
                     const btcPrices = cryptoData.bitcoin;
                     currencyData.usd.price = 1; // USD base
-                    currencyData.eur.price = btcPrices.usd / btcPrices.eur; // EUR to USD rate
-                    currencyData.gbp.price = btcPrices.usd / btcPrices.gbp; // GBP to USD rate  
-                    currencyData.jpy.price = btcPrices.usd / btcPrices.jpy; // JPY to USD rate
-                    currencyData.cad.price = btcPrices.usd / btcPrices.cad; // CAD to USD rate
-                    currencyData.aud.price = btcPrices.usd / btcPrices.aud; // AUD to USD rate
+                    currencyData.eur.price = btcPrices.eur / btcPrices.usd; // Correct EUR to USD rate
+                    currencyData.gbp.price = btcPrices.gbp / btcPrices.usd; // Correct GBP to USD rate  
+                    currencyData.jpy.price = btcPrices.jpy / btcPrices.usd; // Correct JPY to USD rate
+                    currencyData.cad.price = btcPrices.cad / btcPrices.usd; // Correct CAD to USD rate
+                    currencyData.aud.price = btcPrices.aud / btcPrices.usd; // Correct AUD to USD rate
                 }
                 
                 console.log('✅ Real-time rates updated with multi-currency support');
