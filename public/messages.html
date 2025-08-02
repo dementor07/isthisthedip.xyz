@@ -148,7 +148,7 @@
                 </div>
 
                 <!-- Chat Area -->
-                <div id="chatArea" class="flex-1 flex flex-col w-full md:w-2/3">
+                <div id="chatArea" class="flex-1 flex flex-col w-full md:w-2/3 relative min-h-0">
                     <!-- Chat Header -->
                     <div id="chat-header" class="hidden p-4 border-b border-gray-200 bg-gray-50">
                         <div class="flex items-center justify-between">
@@ -197,7 +197,7 @@
                     </div>
 
                     <!-- Messages Container -->
-                    <div id="messages-container" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
+                    <div id="messages-container" class="hidden flex-1 overflow-y-auto p-2 md:p-4 space-y-4 min-h-0">
                         <div id="messages-list"></div>
                         <div id="typing-indicator" class="hidden flex items-center space-x-2 text-sm text-gray-500">
                             <div class="typing-indicator">
@@ -210,21 +210,21 @@
                     </div>
 
                     <!-- Message Input -->
-                    <div id="message-input-container" class="hidden p-4 border-t border-gray-200 bg-white">
-                        <div class="flex space-x-4">
+                    <div id="message-input-container" class="hidden p-2 md:p-4 border-t border-gray-200 bg-white relative z-20">
+                        <div class="flex space-x-2 md:space-x-4">
                             <div class="flex-1">
                                 <textarea 
                                     id="message-input" 
                                     placeholder="Type your message... (max 2000 characters)"
-                                    class="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    class="w-full p-2 md:p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm md:text-base"
                                     rows="2"
                                     maxlength="2000"
                                 ></textarea>
                                 <div class="flex justify-between items-center mt-2">
-                                    <span id="char-count" class="text-sm text-gray-500">0/2000</span>
+                                    <span id="char-count" class="text-xs md:text-sm text-gray-500">0/2000</span>
                                     <button 
                                         id="send-message-btn" 
-                                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 md:px-6 md:py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm md:text-base"
                                         disabled
                                     >
                                         Send
@@ -430,7 +430,20 @@
                 document.getElementById('welcome-screen').classList.add('hidden');
                 document.getElementById('chat-header').classList.remove('hidden');
                 document.getElementById('messages-container').classList.remove('hidden');
-                document.getElementById('message-input-container').classList.remove('hidden');
+                
+                const inputContainer = document.getElementById('message-input-container');
+                inputContainer.classList.remove('hidden');
+                console.log('📱 Message input container visibility:', !inputContainer.classList.contains('hidden'));
+                console.log('📱 Message input container classes:', inputContainer.className);
+                
+                // Hide sidebar on mobile when conversation is selected
+                if (window.innerWidth < 768) {
+                    const sidebar = document.getElementById('conversationsSidebar');
+                    if (sidebar) {
+                        sidebar.classList.add('hidden');
+                        sidebar.classList.remove('flex');
+                    }
+                }
                 
                 // Update chat header
                 const displayName = this.selectedConversation.display_name || this.selectedConversation.username || 'Anonymous';
