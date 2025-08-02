@@ -710,35 +710,136 @@
             }
         }
 
-        // Fetch fiat exchange rates from exchangerate-api.com (free tier)
+        // Fetch fiat exchange rates with multiple fallback sources (no API keys required)
         async function fetchFiatExchangeRates() {
-            try {
-                // Using exchangerate-api.com which provides accurate fiat exchange rates
-                const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-                const exchangeData = await response.json();
-                
-                if (exchangeData.rates) {
-                    // Update fiat currency rates
-                    availableFiats.forEach(fiat => {
-                        if (fiat.id === 'usd') {
-                            currencyData[fiat.id].price = 1; // USD base
-                        } else {
-                            const rate = exchangeData.rates[fiat.id.toUpperCase()];
-                            if (rate) {
-                                // Rate represents how many units of fiat currency = 1 USD
-                                currencyData[fiat.id].price = rate;
-                            }
-                        }
-                    });
-                    
-                    console.log('✅ Fiat exchange rates updated from exchangerate-api.com');
+            // Try multiple free exchange rate APIs in order
+            const sources = [
+                {
+                    name: 'exchangerate-api.com (free)',
+                    url: 'https://api.exchangerate-api.com/v4/latest/USD',
+                    parser: (data) => data.rates
+                },
+                {
+                    name: 'fxratesapi.com (free)',
+                    url: 'https://api.fxratesapi.com/latest?base=USD',
+                    parser: (data) => data.rates
                 }
-                
-                return exchangeData;
-            } catch (error) {
-                console.warn('Failed to fetch fiat exchange rates, using CoinGecko fallback:', error);
-                // Fallback to CoinGecko method
-                return await fetchFiatRatesFromCoinGecko();
+            ];
+
+            for (const source of sources) {
+                try {
+                    console.log(`Trying ${source.name}...`);
+                    const response = await fetch(source.url);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    const exchangeData = await response.json();
+                    const rates = source.parser(exchangeData);
+                    
+                    if (rates && Object.keys(rates).length > 10) {
+                        // Update fiat currency rates
+                        let updatedCount = 0;
+                        availableFiats.forEach(fiat => {
+                            if (fiat.id === 'usd') {
+                                currencyData[fiat.id].price = 1; // USD base
+                                updatedCount++;
+                            } else {
+                                const rate = rates[fiat.id.toUpperCase()];
+                                if (rate) {
+                                    // Rate represents how many units of fiat currency = 1 USD
+                                    currencyData[fiat.id].price = rate;
+                                    updatedCount++;
+                                }
+                            }
+                        });
+                        
+                        console.log(`✅ Updated ${updatedCount} fiat exchange rates from ${source.name}`);
+                        
+                        // Fill in any missing rates with manual fallback
+                        await fillMissingFiatRates();
+                        
+                        return exchangeData;
+                    }
+                } catch (error) {
+                    console.warn(`Failed to fetch from ${source.name}:`, error.message);
+                    continue; // Try next source
+                }
+            }
+            
+            // If all external APIs fail, use CoinGecko as fallback
+            console.warn('All exchange rate APIs failed, using CoinGecko fallback');
+            return await fetchFiatRatesFromCoinGecko();
+        }
+
+        // Fill in missing fiat rates with approximate values (updated as of 2025)
+        async function fillMissingFiatRates() {
+            const approximateRates = {
+                'INR': 85.0,    // Indian Rupee
+                'CNY': 7.25,    // Chinese Yuan  
+                'KRW': 1350,    // South Korean Won
+                'BRL': 5.50,    // Brazilian Real
+                'RUB': 95.0,    // Russian Ruble
+                'MXN': 20.0,    // Mexican Peso
+                'SGD': 1.35,    // Singapore Dollar
+                'HKD': 7.80,    // Hong Kong Dollar
+                'THB': 35.0,    // Thai Baht
+                'MYR': 4.50,    // Malaysian Ringgit
+                'IDR': 16000,   // Indonesian Rupiah
+                'PHP': 55.0,    // Philippine Peso
+                'VND': 24000,   // Vietnamese Dong
+                'TRY': 30.0,    // Turkish Lira
+                'ZAR': 18.0,    // South African Rand
+                'AED': 3.67,    // UAE Dirham
+                'SAR': 3.75,    // Saudi Riyal
+                'PKR': 280,     // Pakistani Rupee
+                'BDT': 120,     // Bangladeshi Taka
+                'LKR': 300,     // Sri Lankan Rupee
+                'NPR': 135,     // Nepalese Rupee
+                'NOK': 11.0,    // Norwegian Krone
+                'SEK': 10.5,    // Swedish Krona
+                'DKK': 6.90,    // Danish Krone
+                'PLN': 4.00,    // Polish Złoty
+                'CZK': 23.0,    // Czech Koruna
+                'HUF': 380,     // Hungarian Forint
+                'BGN': 1.80,    // Bulgarian Lev
+                'RON': 4.65,    // Romanian Leu
+                'HRK': 6.95,    // Croatian Kuna
+                'ILS': 3.70,    // Israeli Shekel
+                'EGP': 50.0,    // Egyptian Pound
+                'MAD': 10.0,    // Moroccan Dirham
+                'NGN': 800,     // Nigerian Naira
+                'GHS': 15.0,    // Ghanaian Cedi
+                'KES': 130,     // Kenyan Shilling
+                'UGX': 3800,    // Ugandan Shilling
+                'TZS': 2500,    // Tanzanian Shilling
+                'ZMW': 27.0,    // Zambian Kwacha
+                'BWP': 13.5,    // Botswana Pula
+                'NAD': 18.0,    // Namibian Dollar
+                'SZL': 18.0,    // Swazi Lilangeni
+                'LSL': 18.0,    // Lesotho Loti
+                'MWK': 1700,    // Malawian Kwacha
+                'RWF': 1300,    // Rwandan Franc
+                'BIF': 2900,    // Burundian Franc
+                'DJF': 178,     // Djiboutian Franc
+                'ETB': 120,     // Ethiopian Birr
+                'SOS': 570,     // Somali Shilling
+            };
+
+            let filledCount = 0;
+            availableFiats.forEach(fiat => {
+                if (fiat.id !== 'usd' && (!currencyData[fiat.id].price || currencyData[fiat.id].price === 1)) {
+                    const rate = approximateRates[fiat.id.toUpperCase()];
+                    if (rate) {
+                        currencyData[fiat.id].price = rate;
+                        filledCount++;
+                    }
+                }
+            });
+
+            if (filledCount > 0) {
+                console.log(`✅ Filled ${filledCount} missing fiat rates with approximate values`);
             }
         }
 
