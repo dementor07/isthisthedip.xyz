@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# Allow crawling of main pages
+Allow: /
+Allow: /pricing
+Allow: /leaderboard
+Allow: /chat
+Allow: /login
+Allow: /signup
+
+# Allow crawling of assets
+Allow: /js/
+Allow: /css/
+Allow: /images/
+
+# Disallow user-specific pages
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /messages
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://isthisthedip.xyz/sitemap.xml
+
+# Crawl delay (optional)
+Crawl-delay: 1

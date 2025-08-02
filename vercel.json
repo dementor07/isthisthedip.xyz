@@ -48,6 +48,14 @@
       "destination": "/messages.html"
     },
     {
+      "source": "/blog",
+      "destination": "/blog.html"
+    },
+    {
+      "source": "/resources",
+      "destination": "/resources.html"
+    },
+    {
       "source": "/js/(.*)",
       "destination": "/js/$1"
     },
