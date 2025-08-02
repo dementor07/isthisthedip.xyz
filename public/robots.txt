@@ -21,7 +21,7 @@ Disallow: /messages
 Disallow: /api/
 
 # Sitemap location
-Sitemap: https://isthisthedip.xyz/sitemap.xml
+Sitemap: https://www.isthisthedip.xyz/sitemap.xml
 
 # Crawl delay (optional)
 Crawl-delay: 1
