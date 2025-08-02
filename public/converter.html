@@ -117,10 +117,16 @@
                         <h3 class="text-lg font-semibold text-center">From</h3>
                         
                         <!-- Currency Selection -->
-                        <div>
-                            <select id="fromCurrency" class="w-full px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center">
-                                <option value="">Loading currencies...</option>
-                            </select>
+                        <div class="relative">
+                            <input type="text" id="fromCurrency" placeholder="Search cryptocurrency or fiat currency..." 
+                                   class="w-full px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center"
+                                   autocomplete="off" readonly>
+                            <div id="fromCurrencyDropdown" class="absolute top-full left-0 right-0 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50 max-h-60 overflow-y-auto hidden">
+                                <!-- Search results will be populated here -->
+                            </div>
+                            <div class="text-xs text-gray-400 mt-2 text-center">
+                                <span id="fromCurrencyCount">Loading currencies...</span>
+                            </div>
                         </div>
 
                         <!-- Amount Input -->
@@ -148,10 +154,16 @@
                         <h3 class="text-lg font-semibold text-center">To</h3>
                         
                         <!-- Currency Selection -->
-                        <div>
-                            <select id="toCurrency" class="w-full px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center">
-                                <option value="">Loading currencies...</option>
-                            </select>
+                        <div class="relative">
+                            <input type="text" id="toCurrency" placeholder="Search cryptocurrency or fiat currency..." 
+                                   class="w-full px-4 py-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center"
+                                   autocomplete="off" readonly>
+                            <div id="toCurrencyDropdown" class="absolute top-full left-0 right-0 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50 max-h-60 overflow-y-auto hidden">
+                                <!-- Search results will be populated here -->
+                            </div>
+                            <div class="text-xs text-gray-400 mt-2 text-center">
+                                <span id="toCurrencyCount">Loading currencies...</span>
+                            </div>
                         </div>
 
                         <!-- Converted Amount -->
@@ -427,7 +439,7 @@
                 });
 
                 console.log(`✅ Loaded ${availableCryptos.length} cryptocurrencies and ${availableFiats.length} fiat currencies`);
-                populateCurrencyDropdowns();
+                initializeCurrencySearch();
                 
             } catch (error) {
                 console.error('Failed to load currency lists:', error);
@@ -457,53 +469,198 @@
                 currencyData[currency.id] = currency;
             });
             
-            populateCurrencyDropdowns();
+            initializeCurrencySearch();
         }
 
-        // Populate currency dropdowns
-        function populateCurrencyDropdowns() {
-            const fromSelect = document.getElementById('fromCurrency');
-            const toSelect = document.getElementById('toCurrency');
-
-            // Clear existing options
-            fromSelect.innerHTML = '';
-            toSelect.innerHTML = '';
-
-            // Add cryptocurrencies
-            if (availableCryptos.length > 0) {
-                const cryptoGroup = document.createElement('optgroup');
-                cryptoGroup.label = `Cryptocurrencies (${availableCryptos.length})`;
-                
-                availableCryptos.forEach(crypto => {
-                    const option = document.createElement('option');
-                    option.value = crypto.id;
-                    option.textContent = `${crypto.name} (${crypto.symbol})`;
-                    cryptoGroup.appendChild(option);
+        // Currency search and selection state
+        let selectedFromCurrency = null;
+        let selectedToCurrency = null;
+        let searchTimeout = null;
+        
+        // Initialize currency search interface
+        function initializeCurrencySearch() {
+            const fromInput = document.getElementById('fromCurrency');
+            const toInput = document.getElementById('toCurrency');
+            
+            // Set initial values
+            selectedFromCurrency = currencyData.bitcoin || availableCryptos[0];
+            selectedToCurrency = currencyData.usd || availableFiats[0];
+            
+            updateCurrencyDisplay('from');
+            updateCurrencyDisplay('to');
+            
+            // Set up search functionality
+            setupCurrencySearch('from');
+            setupCurrencySearch('to');
+            
+            // Update counter
+            document.getElementById('fromCurrencyCount').textContent = 
+                `${availableCryptos.length} cryptocurrencies, ${availableFiats.length} fiat currencies`;
+            document.getElementById('toCurrencyCount').textContent = 
+                `${availableCryptos.length} cryptocurrencies, ${availableFiats.length} fiat currencies`;
+        }
+        
+        // Setup search functionality for currency input
+        function setupCurrencySearch(type) {
+            const input = document.getElementById(`${type}Currency`);
+            const dropdown = document.getElementById(`${type}CurrencyDropdown`);
+            
+            // Make input editable when clicked
+            input.addEventListener('click', () => {
+                input.removeAttribute('readonly');
+                input.placeholder = 'Type to search currencies...';
+                showTopCurrencies(type);
+                input.focus();
+            });
+            
+            // Handle input changes
+            input.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    searchCurrencies(e.target.value, type);
+                }, 150);
+            });
+            
+            // Handle clicking outside
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                    hideDropdown(type);
+                    updateCurrencyDisplay(type);
+                }
+            });
+            
+            // Handle escape key
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    hideDropdown(type);
+                    updateCurrencyDisplay(type);
+                }
+            });
+        }
+        
+        // Show top recommended currencies
+        function showTopCurrencies(type) {
+            const dropdown = document.getElementById(`${type}CurrencyDropdown`);
+            
+            // Top recommended currencies
+            const topCryptos = availableCryptos.slice(0, 8);
+            const topFiats = [
+                currencyData.usd, currencyData.eur, currencyData.gbp, 
+                currencyData.jpy, currencyData.cad, currencyData.aud,
+                currencyData.chf, currencyData.cny
+            ].filter(Boolean);
+            
+            let html = '';
+            
+            if (topCryptos.length > 0) {
+                html += '<div class="p-2 text-xs font-semibold text-gray-400 border-b border-gray-700">Popular Cryptocurrencies</div>';
+                topCryptos.forEach(currency => {
+                    html += createCurrencyOption(currency, type);
                 });
-                
-                fromSelect.appendChild(cryptoGroup.cloneNode(true));
-                toSelect.appendChild(cryptoGroup);
             }
-
-            // Add fiat currencies
-            if (availableFiats.length > 0) {
-                const fiatGroup = document.createElement('optgroup');
-                fiatGroup.label = `Fiat Currencies (${availableFiats.length})`;
-                
-                availableFiats.forEach(fiat => {
-                    const option = document.createElement('option');
-                    option.value = fiat.id;
-                    option.textContent = `${fiat.name} (${fiat.symbol})`;
-                    fiatGroup.appendChild(option);
+            
+            if (topFiats.length > 0) {
+                html += '<div class="p-2 text-xs font-semibold text-gray-400 border-b border-gray-700">Major Fiat Currencies</div>';
+                topFiats.forEach(currency => {
+                    html += createCurrencyOption(currency, type);
                 });
-                
-                fromSelect.appendChild(fiatGroup.cloneNode(true));
-                toSelect.appendChild(fiatGroup);
             }
-
-            // Set default selections
-            fromSelect.value = 'bitcoin';
-            toSelect.value = 'usd';
+            
+            dropdown.innerHTML = html;
+            dropdown.classList.remove('hidden');
+        }
+        
+        // Search currencies by name or symbol
+        function searchCurrencies(query, type) {
+            const dropdown = document.getElementById(`${type}CurrencyDropdown`);
+            
+            if (!query.trim()) {
+                showTopCurrencies(type);
+                return;
+            }
+            
+            const searchTerm = query.toLowerCase();
+            const allCurrencies = [...availableCryptos, ...availableFiats];
+            
+            // Fuzzy search
+            const matches = allCurrencies.filter(currency => 
+                currency.name.toLowerCase().includes(searchTerm) ||
+                currency.symbol.toLowerCase().includes(searchTerm) ||
+                currency.id.toLowerCase().includes(searchTerm)
+            ).slice(0, 20); // Limit to 20 results
+            
+            let html = '';
+            
+            if (matches.length > 0) {
+                html += `<div class="p-2 text-xs font-semibold text-gray-400 border-b border-gray-700">Search Results (${matches.length})</div>`;
+                matches.forEach(currency => {
+                    html += createCurrencyOption(currency, type);
+                });
+            } else {
+                html = '<div class="p-4 text-center text-gray-400">No currencies found</div>';
+            }
+            
+            dropdown.innerHTML = html;
+            dropdown.classList.remove('hidden');
+        }
+        
+        // Create currency option HTML
+        function createCurrencyOption(currency, type) {
+            const priceDisplay = currency.type === 'crypto' 
+                ? `$${currency.price?.toLocaleString() || '0'}` 
+                : currency.symbol;
+                
+            return `
+                <div class="p-3 hover:bg-gray-700 cursor-pointer flex items-center justify-between" onclick="selectCurrency('${currency.id}', '${type}')">
+                    <div class="flex items-center">
+                        <div class="text-xs px-2 py-1 rounded ${currency.type === 'crypto' ? 'bg-blue-600' : 'bg-green-600'} text-white mr-3">
+                            ${currency.type === 'crypto' ? 'CRYPTO' : 'FIAT'}
+                        </div>
+                        <div>
+                            <div class="font-semibold">${currency.name}</div>
+                            <div class="text-sm text-gray-400">${currency.symbol}</div>
+                        </div>
+                    </div>
+                    <div class="text-sm font-mono">${priceDisplay}</div>
+                </div>
+            `;
+        }
+        
+        // Select a currency
+        function selectCurrency(currencyId, type) {
+            const currency = currencyData[currencyId];
+            if (!currency) return;
+            
+            if (type === 'from') {
+                selectedFromCurrency = currency;
+            } else {
+                selectedToCurrency = currency;
+            }
+            
+            hideDropdown(type);
+            updateCurrencyDisplay(type);
+            updatePriceDisplay();
+            convert();
+        }
+        
+        // Hide dropdown
+        function hideDropdown(type) {
+            const dropdown = document.getElementById(`${type}CurrencyDropdown`);
+            const input = document.getElementById(`${type}Currency`);
+            
+            dropdown.classList.add('hidden');
+            input.setAttribute('readonly', 'true');
+            input.placeholder = 'Search cryptocurrency or fiat currency...';
+        }
+        
+        // Update currency display
+        function updateCurrencyDisplay(type) {
+            const input = document.getElementById(`${type}Currency`);
+            const currency = type === 'from' ? selectedFromCurrency : selectedToCurrency;
+            
+            if (currency) {
+                input.value = `${currency.name} (${currency.symbol})`;
+            }
         }
 
         // Fetch real-time crypto prices and fiat rates
@@ -555,8 +712,8 @@
 
         // Convert between currencies
         function convert() {
-            const fromCurrency = document.getElementById('fromCurrency').value;
-            const toCurrency = document.getElementById('toCurrency').value;
+            if (!selectedFromCurrency || !selectedToCurrency) return;
+            
             const fromAmount = parseFloat(document.getElementById('fromAmount').value) || 0;
 
             if (fromAmount === 0) {
@@ -566,49 +723,48 @@
 
             let convertedAmount;
 
-            if (currencyData[fromCurrency].type === 'crypto' && currencyData[toCurrency].type === 'fiat') {
+            if (selectedFromCurrency.type === 'crypto' && selectedToCurrency.type === 'fiat') {
                 // Crypto to fiat - use direct rates from API
-                const cryptoPrices = currencyData[fromCurrency].prices;
-                const fiatSymbol = toCurrency.toLowerCase();
+                const cryptoPrices = selectedFromCurrency.prices;
+                const fiatSymbol = selectedToCurrency.id.toLowerCase();
                 
                 if (cryptoPrices && cryptoPrices[fiatSymbol]) {
                     // Direct conversion available
                     convertedAmount = fromAmount * cryptoPrices[fiatSymbol];
                 } else {
                     // Fallback to USD conversion
-                    const usdValue = fromAmount * currencyData[fromCurrency].price;
-                    convertedAmount = usdValue / currencyData[toCurrency].price;
+                    const usdValue = fromAmount * selectedFromCurrency.price;
+                    convertedAmount = usdValue / selectedToCurrency.price;
                 }
-            } else if (currencyData[fromCurrency].type === 'fiat' && currencyData[toCurrency].type === 'crypto') {
+            } else if (selectedFromCurrency.type === 'fiat' && selectedToCurrency.type === 'crypto') {
                 // Fiat to crypto - use direct rates from API
-                const cryptoPrices = currencyData[toCurrency].prices;
-                const fiatSymbol = fromCurrency.toLowerCase();
+                const cryptoPrices = selectedToCurrency.prices;
+                const fiatSymbol = selectedFromCurrency.id.toLowerCase();
                 
                 if (cryptoPrices && cryptoPrices[fiatSymbol]) {
                     // Direct conversion available
                     convertedAmount = fromAmount / cryptoPrices[fiatSymbol];
                 } else {
                     // Fallback to USD conversion
-                    const usdValue = fromAmount * currencyData[fromCurrency].price;
-                    convertedAmount = usdValue / currencyData[toCurrency].price;
+                    const usdValue = fromAmount * selectedFromCurrency.price;
+                    convertedAmount = usdValue / selectedToCurrency.price;
                 }
-            } else if (currencyData[fromCurrency].type === 'crypto' && currencyData[toCurrency].type === 'crypto') {
+            } else if (selectedFromCurrency.type === 'crypto' && selectedToCurrency.type === 'crypto') {
                 // Crypto to crypto - use USD as base
-                const usdValue = fromAmount * currencyData[fromCurrency].price;
-                convertedAmount = usdValue / currencyData[toCurrency].price;
+                const usdValue = fromAmount * selectedFromCurrency.price;
+                convertedAmount = usdValue / selectedToCurrency.price;
             } else {
                 // Fiat to fiat - convert through USD
-                // currencyData[x].price = how many X you get for 1 USD (X per USD rate)
-                if (fromCurrency === 'usd') {
+                if (selectedFromCurrency.id === 'usd') {
                     // USD to other fiat
-                    convertedAmount = fromAmount * currencyData[toCurrency].price;
-                } else if (toCurrency === 'usd') {
+                    convertedAmount = fromAmount * selectedToCurrency.price;
+                } else if (selectedToCurrency.id === 'usd') {
                     // Other fiat to USD
-                    convertedAmount = fromAmount / currencyData[fromCurrency].price;
+                    convertedAmount = fromAmount / selectedFromCurrency.price;
                 } else {
                     // Other fiat to other fiat - convert through USD
-                    const usdValue = fromAmount / currencyData[fromCurrency].price;
-                    convertedAmount = usdValue * currencyData[toCurrency].price;
+                    const usdValue = fromAmount / selectedFromCurrency.price;
+                    convertedAmount = usdValue * selectedToCurrency.price;
                 }
             }
 
@@ -621,34 +777,30 @@
             // Update exchange rate display
             const exchangeRate = convertedAmount / fromAmount;
             document.getElementById('exchangeRate').textContent = 
-                `1 ${currencyData[fromCurrency].symbol} = ${exchangeRate.toLocaleString(undefined, {
+                `1 ${selectedFromCurrency.symbol} = ${exchangeRate.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 8
-                })} ${currencyData[toCurrency].symbol}`;
+                })} ${selectedToCurrency.symbol}`;
 
             // Add to history
-            addToHistory(fromAmount, fromCurrency, convertedAmount, toCurrency);
+            addToHistory(fromAmount, selectedFromCurrency, convertedAmount, selectedToCurrency);
         }
 
         // Update price displays
         function updatePriceDisplay() {
-            const fromCurrency = document.getElementById('fromCurrency').value;
-            const toCurrency = document.getElementById('toCurrency').value;
+            if (!selectedFromCurrency) return;
 
-            const fromData = currencyData[fromCurrency];
-            const toData = currencyData[toCurrency];
-
-            if (fromData.type === 'crypto') {
-                document.getElementById('fromPrice').textContent = `$${fromData.price.toLocaleString()} per ${fromData.symbol}`;
+            if (selectedFromCurrency.type === 'crypto') {
+                document.getElementById('fromPrice').textContent = `$${selectedFromCurrency.price?.toLocaleString() || '0'} per ${selectedFromCurrency.symbol}`;
             } else {
-                document.getElementById('fromPrice').textContent = `1 ${fromData.symbol} = $${(1/fromData.price).toFixed(4)} USD`;
+                document.getElementById('fromPrice').textContent = `1 ${selectedFromCurrency.symbol} = $${(1/selectedFromCurrency.price).toFixed(4)} USD`;
             }
         }
 
         // Swap currencies
         function swapCurrencies() {
-            const fromSelect = document.getElementById('fromCurrency');
-            const toSelect = document.getElementById('toCurrency');
+            if (!selectedFromCurrency || !selectedToCurrency) return;
+            
             const fromAmount = document.getElementById('fromAmount');
             const toAmount = document.getElementById('toAmount');
 
@@ -658,33 +810,39 @@
                 document.getElementById('swapButton').classList.remove('flip-animation');
             }, 600);
 
-            // Swap values
-            const tempCurrency = fromSelect.value;
-            fromSelect.value = toSelect.value;
-            toSelect.value = tempCurrency;
+            // Swap currencies
+            const tempCurrency = selectedFromCurrency;
+            selectedFromCurrency = selectedToCurrency;
+            selectedToCurrency = tempCurrency;
 
             const tempAmount = fromAmount.value;
             fromAmount.value = toAmount.value || tempAmount;
 
             // Update displays and convert
+            updateCurrencyDisplay('from');
+            updateCurrencyDisplay('to');
             updatePriceDisplay();
             convert();
         }
 
         // Load specific conversion
         function loadConversion(from, to, amount) {
-            document.getElementById('fromCurrency').value = from;
-            document.getElementById('toCurrency').value = to;
-            document.getElementById('fromAmount').value = amount;
-            updatePriceDisplay();
-            convert();
+            if (currencyData[from] && currencyData[to]) {
+                selectedFromCurrency = currencyData[from];
+                selectedToCurrency = currencyData[to];
+                document.getElementById('fromAmount').value = amount;
+                updateCurrencyDisplay('from');
+                updateCurrencyDisplay('to');
+                updatePriceDisplay();
+                convert();
+            }
         }
 
         // Add to conversion history
         function addToHistory(fromAmount, fromCurrency, toAmount, toCurrency) {
             const conversion = {
-                from: `${fromAmount} ${currencyData[fromCurrency].symbol}`,
-                to: `${toAmount.toLocaleString(undefined, {maximumFractionDigits: 8})} ${currencyData[toCurrency].symbol}`,
+                from: `${fromAmount} ${fromCurrency.symbol}`,
+                to: `${toAmount.toLocaleString(undefined, {maximumFractionDigits: 8})} ${toCurrency.symbol}`,
                 timestamp: new Date().toLocaleTimeString()
             };
 
@@ -751,14 +909,6 @@
             
             // Set up event listeners
             document.getElementById('fromAmount').addEventListener('input', convert);
-            document.getElementById('fromCurrency').addEventListener('change', () => {
-                updatePriceDisplay();
-                convert();
-            });
-            document.getElementById('toCurrency').addEventListener('change', () => {
-                updatePriceDisplay();
-                convert();
-            });
 
             // Fetch real-time rates on page load
             await fetchRealTimeRates();
