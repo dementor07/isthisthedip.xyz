@@ -819,8 +819,7 @@ async function handleGetDirectMessages(req, res) {
         OR: [
           { senderId: decoded.id, receiverId: otherUserId },
           { senderId: otherUserId, receiverId: decoded.id }
-        ],
-        isDeleted: false
+        ]
       },
       orderBy: { createdAt: 'desc' },
       take: Math.min(parseInt(limit), 100),
