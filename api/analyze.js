@@ -252,19 +252,67 @@ async function performRealAnalysis(crypto, user, options = {}) {
     }
 }
 
+async function resolveSymbolToId(symbol) {
+    try {
+        console.log(`🔍 Resolving symbol: ${symbol}`);
+        
+        // Search CoinGecko for the symbol
+        const searchResponse = await fetch(`https://api.coingecko.com/api/v3/search?query=${symbol}`);
+        
+        if (!searchResponse.ok) {
+            console.warn('CoinGecko search API failed, using symbol as-is');
+            return symbol.toLowerCase();
+        }
+        
+        const searchData = await searchResponse.json();
+        
+        // Find exact symbol match (case-insensitive)
+        const exactMatch = searchData.coins?.find(coin => 
+            coin.symbol.toLowerCase() === symbol.toLowerCase()
+        );
+        
+        if (exactMatch) {
+            console.log(`✅ Resolved ${symbol} to ID: ${exactMatch.id}`);
+            return exactMatch.id;
+        }
+        
+        // Try to find partial match if exact match fails
+        const partialMatch = searchData.coins?.find(coin => 
+            coin.symbol.toLowerCase().includes(symbol.toLowerCase()) ||
+            coin.name.toLowerCase().includes(symbol.toLowerCase())
+        );
+        
+        if (partialMatch) {
+            console.log(`⚠️ Partial match for ${symbol}: ${partialMatch.id}`);
+            return partialMatch.id;
+        }
+        
+        console.warn(`No match found for ${symbol}, using as-is`);
+        return symbol.toLowerCase();
+    } catch (error) {
+        console.error('Symbol resolution failed:', error);
+        return symbol.toLowerCase();
+    }
+}
+
 async function getCoinGeckoData(crypto) {
     try {
+        // Step 1: Resolve symbol to CoinGecko ID
+        const coinId = await resolveSymbolToId(crypto);
+        
         // Enhanced API strategy: Use 2-3 calls for comprehensive data
         const [marketData, coinDetails] = await Promise.allSettled([
-            getCoinGeckoMarketData(crypto),
-            getCoinGeckoDetailedData(crypto)
+            getCoinGeckoMarketData(coinId),
+            getCoinGeckoDetailedData(coinId)
         ]);
 
         const market = marketData.status === 'fulfilled' ? marketData.value : null;
         const details = coinDetails.status === 'fulfilled' ? coinDetails.value : null;
 
         if (!market) {
-            return await getCoinGeckoSimplePrice(crypto);
+            // Try fallback with original symbol
+            console.log(`⚠️ Market data failed for ${coinId}, trying fallback...`);
+            return await getCoinGeckoSimplePrice(coinId);
         }
 
         // Merge comprehensive data
@@ -280,6 +328,7 @@ async function getCoinGeckoData(crypto) {
         };
     } catch (error) {
         console.error('CoinGecko comprehensive data error:', error);
+        // Final fallback with original input
         return await getCoinGeckoSimplePrice(crypto);
     }
 }
@@ -287,12 +336,18 @@ async function getCoinGeckoData(crypto) {
 async function getCoinGeckoMarketData(crypto) {
     const response = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${crypto}&order=market_cap_desc&per_page=1&page=1&sparkline=true&price_change_percentage=1h%2C24h%2C7d%2C30d`);
     
-    if (!response.ok) throw new Error('Market data fetch failed');
+    if (!response.ok) {
+        console.error(`Market data API failed: ${response.status} ${response.statusText}`);
+        throw new Error('Market data fetch failed');
+    }
     
     const data = await response.json();
     const coin = data[0];
     
-    if (!coin) throw new Error('Coin not found');
+    if (!coin) {
+        console.warn(`No market data found for coin ID: ${crypto}`);
+        throw new Error('Coin not found');
+    }
 
     return {
         id: coin.id,
@@ -361,9 +416,35 @@ async function getCoinGeckoDetailedData(crypto) {
 
 
 async function getCoinGeckoSimplePrice(crypto) {
-    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${crypto}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`);
-    const data = await response.json();
-    return data[crypto] || data[Object.keys(data)[0]];
+    try {
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${crypto}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`);
+        
+        if (!response.ok) {
+            console.error(`Simple price API failed: ${response.status} ${response.statusText}`);
+            throw new Error('Simple price fetch failed');
+        }
+        
+        const data = await response.json();
+        const priceData = data[crypto] || data[Object.keys(data)[0]];
+        
+        if (!priceData) {
+            console.warn(`No price data found for: ${crypto}`);
+            throw new Error('No price data available');
+        }
+        
+        return {
+            name: crypto,
+            symbol: crypto.toUpperCase(),
+            current_price: priceData.usd,
+            usd: priceData.usd,
+            price_change_percentage_24h: priceData.usd_24h_change,
+            total_volume: priceData.usd_24h_vol,
+            market_cap: priceData.usd_market_cap
+        };
+    } catch (error) {
+        console.error('Simple price lookup failed:', error);
+        throw error;
+    }
 }
 
 async function getFearGreedIndex() {
