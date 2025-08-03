@@ -782,32 +782,25 @@ async function getEnhancedMarketData(crypto) {
 }
 
 async function getAdvancedTechnicalAnalysis(crypto) {
-    return {
-        rsi: 35,
-        macd: -150,
-        support: 42000,
-        resistance: 48000,
-        overallScore: 68,
-        momentum: 'bearish',
-        signals: ['oversold_rsi', 'bullish_divergence'],
-        patterns: ['bullish_divergence', 'double_bottom']
-    };
+    // TODO: Implement real technical analysis from trading data sources
+    // For now, return null to indicate technical analysis is unavailable
+    // rather than fake data that could mislead traders
+    console.log(`⚠️ Technical analysis not implemented for ${crypto} - using market data only`);
+    return null;
 }
 
 async function getMarketSentimentAnalysis(crypto) {
-    return {
-        score: 22, // Extreme fear
-        sources: ['social_media', 'news', 'options'],
-        trend: 'improving'
-    };
+    // TODO: Implement real sentiment analysis from news/social sources
+    // For now, return null to indicate sentiment analysis is unavailable
+    console.log(`⚠️ Sentiment analysis not implemented for ${crypto} - using market data only`);
+    return { score: null, sources: ['unavailable'], trend: 'unknown' };
 }
 
 async function getMarketContextAnalysis() {
-    return {
-        condition: 'bear_market', // bull_market, bear_market, accumulation, distribution
-        phase: 'late_stage',
-        bitcoinCorrelation: 0.85
-    };
+    // TODO: Implement real market context analysis from macro data
+    // For now, return unknown to indicate this analysis is unavailable
+    console.log(`⚠️ Market context analysis not implemented - using market data only`);
+    return { condition: 'unknown', phase: 'unknown', bitcoinCorrelation: null };
 }
 
 
