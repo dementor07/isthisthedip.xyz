@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Card Generator - IsThisTheDip.xyz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://html2canvas.herokuapp.com/dist/html2canvas.min.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8 text-center">Social Media Card Generator</h1>
+        
+        <!-- Card Preview -->
+        <div class="flex justify-center mb-8">
+            <div id="socialCard" class="w-96 h-64 gradient-bg rounded-2xl p-6 text-white shadow-2xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="text-2xl font-bold">📉 IsThisTheDip.xyz</div>
+                    <div class="text-right">
+                        <div class="text-sm opacity-75">Dip Score</div>
+                        <div id="cardScore" class="text-3xl font-bold">75/100</div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div id="cardCrypto" class="text-3xl font-bold mb-1">BITCOIN</div>
+                    <div class="flex items-center space-x-4">
+                        <div>
+                            <span class="text-sm opacity-75">Price:</span>
+                            <span id="cardPrice" class="font-bold">$45,230</span>
+                        </div>
+                        <div>
+                            <span class="text-sm opacity-75">24h:</span>
+                            <span id="cardChange" class="font-bold text-red-400">-5.4%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm opacity-75">Signal</div>
+                        <div id="cardSignal" class="text-xl font-bold text-green-400">STRONG BUY</div>
+                    </div>
+                    <div class="text-sm opacity-75">
+                        Free Analysis Tool
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Input Form -->
+        <div class="max-w-md mx-auto bg-gray-800 rounded-lg p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">Customize Your Card</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm mb-1">Cryptocurrency</label>
+                    <input type="text" id="cryptoInput" value="BITCOIN" class="w-full bg-gray-700 rounded px-3 py-2">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm mb-1">Dip Score</label>
+                        <input type="number" id="scoreInput" value="75" min="0" max="100" class="w-full bg-gray-700 rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Signal</label>
+                        <select id="signalInput" class="w-full bg-gray-700 rounded px-3 py-2">
+                            <option value="STRONG BUY">STRONG BUY</option>
+                            <option value="BUY">BUY</option>
+                            <option value="MAYBE">MAYBE</option>
+                            <option value="WAIT">WAIT</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm mb-1">Price</label>
+                        <input type="text" id="priceInput" value="$45,230" class="w-full bg-gray-700 rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">24h Change</label>
+                        <input type="text" id="changeInput" value="-5.4%" class="w-full bg-gray-700 rounded px-3 py-2">
+                    </div>
+                </div>
+                
+                <button onclick="updateCard()" class="w-full bg-purple-600 hover:bg-purple-700 rounded py-2 transition-colors">
+                    Update Card
+                </button>
+                
+                <button onclick="downloadCard()" class="w-full bg-green-600 hover:bg-green-700 rounded py-2 transition-colors">
+                    Download as Image
+                </button>
+            </div>
+        </div>
+        
+        <!-- Pre-made Templates -->
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6 text-center">Quick Templates</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <button onclick="loadTemplate('btc')" class="bg-gray-800 rounded-lg p-4 text-left hover:bg-gray-700 transition-colors">
+                    <div class="font-bold text-orange-400">Bitcoin Template</div>
+                    <div class="text-sm text-gray-400">Score: 72/100 - Strong Buy</div>
+                </button>
+                <button onclick="loadTemplate('eth')" class="bg-gray-800 rounded-lg p-4 text-left hover:bg-gray-700 transition-colors">
+                    <div class="font-bold text-blue-400">Ethereum Template</div>
+                    <div class="text-sm text-gray-400">Score: 68/100 - Buy</div>
+                </button>
+                <button onclick="loadTemplate('alt')" class="bg-gray-800 rounded-lg p-4 text-left hover:bg-gray-700 transition-colors">
+                    <div class="font-bold text-green-400">Altcoin Template</div>
+                    <div class="text-sm text-gray-400">Score: 85/100 - Strong Buy</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateCard() {
+            const crypto = document.getElementById('cryptoInput').value.toUpperCase();
+            const score = document.getElementById('scoreInput').value;
+            const signal = document.getElementById('signalInput').value;
+            const price = document.getElementById('priceInput').value;
+            const change = document.getElementById('changeInput').value;
+            
+            document.getElementById('cardCrypto').textContent = crypto;
+            document.getElementById('cardScore').textContent = `${score}/100`;
+            document.getElementById('cardSignal').textContent = signal;
+            document.getElementById('cardPrice').textContent = price;
+            document.getElementById('cardChange').textContent = change;
+            
+            // Update colors based on signal
+            const signalElement = document.getElementById('cardSignal');
+            const changeElement = document.getElementById('cardChange');
+            
+            switch(signal) {
+                case 'STRONG BUY':
+                    signalElement.className = 'text-xl font-bold text-green-400';
+                    break;
+                case 'BUY':
+                    signalElement.className = 'text-xl font-bold text-green-500';
+                    break;
+                case 'MAYBE':
+                    signalElement.className = 'text-xl font-bold text-yellow-400';
+                    break;
+                case 'WAIT':
+                    signalElement.className = 'text-xl font-bold text-red-400';
+                    break;
+            }
+            
+            // Update change color
+            if (change.startsWith('-')) {
+                changeElement.className = 'font-bold text-red-400';
+            } else {
+                changeElement.className = 'font-bold text-green-400';
+            }
+        }
+        
+        function loadTemplate(type) {
+            const templates = {
+                btc: {
+                    crypto: 'BITCOIN',
+                    score: 72,
+                    signal: 'STRONG BUY',
+                    price: '$43,250',
+                    change: '-8.2%'
+                },
+                eth: {
+                    crypto: 'ETHEREUM',
+                    score: 68,
+                    signal: 'BUY',
+                    price: '$2,890',
+                    change: '-6.5%'
+                },
+                alt: {
+                    crypto: 'SOLANA',
+                    score: 85,
+                    signal: 'STRONG BUY',
+                    price: '$125.40',
+                    change: '-12.3%'
+                }
+            };
+            
+            const template = templates[type];
+            if (template) {
+                document.getElementById('cryptoInput').value = template.crypto;
+                document.getElementById('scoreInput').value = template.score;
+                document.getElementById('signalInput').value = template.signal;
+                document.getElementById('priceInput').value = template.price;
+                document.getElementById('changeInput').value = template.change;
+                updateCard();
+            }
+        }
+        
+        async function downloadCard() {
+            const card = document.getElementById('socialCard');
+            
+            try {
+                const canvas = await html2canvas(card, {
+                    backgroundColor: null,
+                    scale: 2, // Higher quality
+                    useCORS: true
+                });
+                
+                // Create download link
+                const link = document.createElement('a');
+                link.download = `crypto-analysis-${document.getElementById('cardCrypto').textContent.toLowerCase()}.png`;
+                link.href = canvas.toDataURL();
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+            } catch (error) {
+                console.error('Error generating image:', error);
+                alert('Error generating image. Please try again.');
+            }
+        }
+        
+        // Auto-update card when inputs change
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = ['cryptoInput', 'scoreInput', 'signalInput', 'priceInput', 'changeInput'];
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', updateCard);
+                document.getElementById(id).addEventListener('change', updateCard);
+            });
+        });
+    </script>
+</body>
+</html>

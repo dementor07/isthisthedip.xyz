@@ -681,7 +681,47 @@
             window.leaderboard = new ComprehensiveLeaderboardManager();
             initializeMobileMenu();
         });
+
+        // Social Media Sharing Functions for Leaderboard
+        function shareLeaderboard() {
+            const text = `🏆 Check out the live crypto dip leaderboard!\n\n📊 10,000+ cryptocurrencies ranked by buying opportunity\n🎯 Real-time dip scores and buy signals\n💰 Find the best crypto deals right now!\n\nFree access 👇`;
+            const url = 'https://isthisthedip.xyz/leaderboard';
+            const hashtags = 'crypto,leaderboard,bitcoin,ethereum,altcoins,investing,BuyTheDip';
+            
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${hashtags}`;
+            window.open(twitterUrl, '_blank', 'width=600,height=400');
+        }
+
+        function shareCoinAnalysis(symbol) {
+            const text = `🚀 Just found ${symbol} on the crypto dip leaderboard!\n\n📊 Check out its dip score and analysis\n💰 Could be a great buying opportunity\n\nFree crypto analysis 👇`;
+            const url = `https://isthisthedip.xyz/?symbol=${symbol.toLowerCase()}`;
+            const hashtags = `crypto,${symbol},bitcoin,investing,dip,analysis`;
+            
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${hashtags}`;
+            window.open(twitterUrl, '_blank', 'width=600,height=400');
+        }
     </script>
+
+    <!-- Social Media Follow Section -->
+    <div class="fixed bottom-4 right-4 z-50">
+        <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-3 shadow-lg">
+            <div class="flex items-center space-x-2 text-white text-sm">
+                <span class="hidden md:inline">Follow us:</span>
+                <a href="https://twitter.com/isthisthedip" target="_blank" class="hover:text-blue-200 transition-colors">
+                    <i class="fab fa-twitter text-lg"></i>
+                </a>
+                <a href="https://reddit.com/r/isthisthedip" target="_blank" class="hover:text-orange-200 transition-colors">
+                    <i class="fab fa-reddit text-lg"></i>
+                </a>
+                <a href="https://t.me/isthisthedip" target="_blank" class="hover:text-blue-200 transition-colors">
+                    <i class="fab fa-telegram text-lg"></i>
+                </a>
+                <button onclick="shareLeaderboard()" class="hover:text-yellow-200 transition-colors">
+                    <i class="fas fa-share text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
