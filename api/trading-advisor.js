@@ -70,7 +70,14 @@ export default async function handler(req, res) {
             success: true,
             advice: tradingAdvice,
             timestamp: new Date(),
-            tier: user.tier
+            tier: user.tier,
+            dataQuality: {
+                marketData: 'current', // We always require real market data
+                technicalAnalysis: tradingAdvice.aiInsights?.dataQuality?.warnings?.includes('Technical analysis unavailable') ? 'limited' : 'available',
+                sentimentData: tradingAdvice.aiInsights?.dataQuality?.warnings?.includes('Sentiment data unavailable') ? 'limited' : 'available',
+                aiAnalysis: tradingAdvice.aiInsights?.sources?.length > 1 ? 'full' : 'basic',
+                overall: tradingAdvice.aiInsights?.dataQuality?.reliable ? 'high' : 'medium'
+            }
         });
 
     } catch (error) {
@@ -108,22 +115,25 @@ async function generateAITradingAdvice({
     let marketData, technicalAnalysis, sentimentData, marketContext;
     
     try {
-        [marketData, technicalAnalysis, sentimentData, marketContext] = await Promise.all([
-            getEnhancedMarketData(crypto).catch(err => {
-                console.error('Market data fetch failed:', err);
-                return getFallbackMarketData(crypto);
-            }),
+        // Try to get real market data - if it fails, the entire analysis should fail
+        marketData = await getEnhancedMarketData(crypto);
+        if (!marketData || !marketData.price) {
+            throw new Error(`Unable to retrieve real market data for ${crypto}. Trading analysis requires current market data.`);
+        }
+        
+        // For technical analysis, sentiment, and market context - these can have minimal fallbacks
+        [technicalAnalysis, sentimentData, marketContext] = await Promise.all([
             getAdvancedTechnicalAnalysis(crypto).catch(err => {
-                console.error('Technical analysis failed:', err);
-                return getFallbackTechnicalAnalysis();
+                console.warn('Technical analysis unavailable:', err.message);
+                return null; // Will be handled in calculation functions
             }),
             getMarketSentimentAnalysis(crypto).catch(err => {
-                console.error('Sentiment analysis failed:', err);
-                return getFallbackSentimentAnalysis();
+                console.warn('Sentiment analysis unavailable:', err.message);
+                return { score: null, sources: ['unavailable'], trend: 'unknown' };
             }),
             getMarketContextAnalysis().catch(err => {
-                console.error('Market context failed:', err);
-                return getFallbackMarketContext();
+                console.warn('Market context unavailable:', err.message);
+                return { condition: 'unknown', phase: 'unknown', bitcoinCorrelation: null };
             })
         ]);
         console.log(`✅ Market data retrieved for ${crypto}`);
@@ -134,7 +144,7 @@ async function generateAITradingAdvice({
 
     // Calculate advanced metrics
     const riskMetrics = calculateRiskMetrics(marketData, technicalAnalysis);
-    const opportunityScore = calculateOpportunityScore(marketData, technicalAnalysis, sentimentData);
+    const opportunityAnalysis = calculateOpportunityScore(marketData, technicalAnalysis, sentimentData);
     
     // Get AI-powered market insights and reasoning
     console.log(`🧠 Getting AI insights for ${crypto}...`);
@@ -155,13 +165,26 @@ async function generateAITradingAdvice({
         console.log(`✅ AI insights completed for ${crypto}`);
     } catch (error) {
         console.error('AI insights failed:', error);
-        // Use fallback insights
+        // Use minimal insights based on available data
+        const dataQualityWarnings = [];
+        if (!technicalAnalysis) dataQualityWarnings.push('Technical analysis unavailable');
+        if (!sentimentData || sentimentData.score === null) dataQualityWarnings.push('Sentiment data unavailable');
+        if (!marketContext || marketContext.condition === 'unknown') dataQualityWarnings.push('Market context unavailable');
+        
         aiInsights = {
-            insights: [`Standard algorithmic analysis for ${crypto}`],
-            explanation: 'Market analysis based on technical indicators and historical patterns.',
-            reasoning: 'Algorithmic approach with proven financial metrics.',
-            confidence: 70,
-            sources: ['Algorithmic']
+            insights: [
+                `Analysis for ${crypto} based on available market data only`,
+                dataQualityWarnings.length > 0 ? `⚠️ Limited data: ${dataQualityWarnings.join(', ')}` : 'Standard market analysis completed',
+                'Recommendation based on price action and basic metrics'
+            ].filter(Boolean),
+            explanation: `Analysis completed with real market data for ${crypto}. Some advanced features may be limited due to data availability.`,
+            reasoning: `Based on current price: $${marketData.price}, 24h change: ${marketData.price_change_percentage_24h?.toFixed(2)}%`,
+            confidence: dataQualityWarnings.length > 2 ? 50 : dataQualityWarnings.length > 0 ? 65 : 75,
+            sources: ['Market Data', ...(technicalAnalysis ? ['Technical Analysis'] : []), ...(sentimentData?.score !== null ? ['Sentiment'] : [])],
+            dataQuality: {
+                warnings: dataQualityWarnings,
+                reliable: dataQualityWarnings.length === 0
+            }
         };
     }
 
@@ -173,7 +196,7 @@ async function generateAITradingAdvice({
         sentimentData,
         marketContext,
         riskMetrics,
-        opportunityScore,
+        opportunityScore: opportunityAnalysis.score,
         portfolioSize,
         riskTolerance,
         investmentGoal,
@@ -194,7 +217,7 @@ async function generateIntelligentStrategy(params) {
         sentimentData,
         marketContext,
         riskMetrics,
-        opportunityScore,
+        opportunityScore: opportunityAnalysis.score,
         portfolioSize,
         riskTolerance,
         investmentGoal,
@@ -609,22 +632,70 @@ function calculateRiskMetrics(marketData, technicalAnalysis) {
     const price24h = marketData.price_change_percentage_24h || 0;
     const price7d = marketData.price_change_percentage_7d || 0;
     const volume = marketData.total_volume || 0;
-    const marketCap = marketData.market_cap || 0;
+    const marketCap = marketData.market_cap || 1; // Avoid division by zero
+
+    // Handle missing technical analysis data
+    let technicalStrength = 'unknown';
+    let momentumRisk = 0;
+    
+    if (technicalAnalysis && technicalAnalysis.rsi !== undefined) {
+        technicalStrength = technicalAnalysis.rsi > 70 ? 'overbought' : 
+                           technicalAnalysis.rsi < 30 ? 'oversold' : 'neutral';
+    }
+    
+    if (technicalAnalysis && technicalAnalysis.macd !== undefined) {
+        momentumRisk = Math.abs(technicalAnalysis.macd) / 100;
+    }
 
     return {
         volatility: Math.abs(price24h) / 100 + Math.abs(price7d) / 100 / 7,
-        liquidityRisk: volume / marketCap,
-        technicalStrength: technicalAnalysis.rsi > 70 ? 'overbought' : technicalAnalysis.rsi < 30 ? 'oversold' : 'neutral',
-        momentumRisk: Math.abs(technicalAnalysis.macd || 0) / 100
+        liquidityRisk: marketCap > 0 ? volume / marketCap : 0,
+        technicalStrength,
+        momentumRisk,
+        dataQuality: {
+            hasTechnicalData: !!technicalAnalysis,
+            hasVolumeData: !!volume,
+            hasMarketCapData: !!marketCap
+        }
     };
 }
 
 function calculateOpportunityScore(marketData, technicalAnalysis, sentimentData) {
     const dipScore = marketData.dipScore || 0;
-    const technicalScore = technicalAnalysis.overallScore || 0;
-    const sentimentScore = 100 - (sentimentData.score || 50); // Invert sentiment (low sentiment = high opportunity)
     
-    return Math.round((dipScore * 0.5 + technicalScore * 0.3 + sentimentScore * 0.2));
+    let technicalScore = 0;
+    let technicalWeight = 0;
+    if (technicalAnalysis && technicalAnalysis.overallScore !== undefined) {
+        technicalScore = technicalAnalysis.overallScore;
+        technicalWeight = 0.3;
+    }
+    
+    let sentimentScore = 0; 
+    let sentimentWeight = 0;
+    if (sentimentData && sentimentData.score !== null && sentimentData.score !== undefined) {
+        sentimentScore = 100 - sentimentData.score; // Invert sentiment (low sentiment = high opportunity)
+        sentimentWeight = 0.2;
+    }
+    
+    // Adjust weights based on available data
+    const dipWeight = 0.5;
+    const totalWeight = dipWeight + technicalWeight + sentimentWeight;
+    
+    if (totalWeight === 0) {
+        throw new Error('Insufficient data to calculate opportunity score');
+    }
+    
+    const score = (dipScore * dipWeight + technicalScore * technicalWeight + sentimentScore * sentimentWeight) / totalWeight;
+    
+    return {
+        score: Math.round(score),
+        confidence: totalWeight >= 0.8 ? 'high' : totalWeight >= 0.5 ? 'medium' : 'low',
+        dataUsed: {
+            dipScore: !!dipScore,
+            technicalAnalysis: !!technicalWeight,
+            sentimentAnalysis: !!sentimentWeight
+        }
+    };
 }
 
 function generateAIInsights(params) {
@@ -650,8 +721,10 @@ function generateAIInsights(params) {
 
 // Real market data integration with existing analyze.js functionality
 async function getEnhancedMarketData(crypto) {
+    console.log(`🔍 Fetching real market data for ${crypto}...`);
+    
     try {
-        // Use the existing analysis API to get comprehensive market data
+        // First try: Use the existing analysis API to get comprehensive market data
         const response = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/analyze`, {
             method: 'POST',
             headers: {
@@ -662,32 +735,50 @@ async function getEnhancedMarketData(crypto) {
 
         if (response.ok) {
             const analysisData = await response.json();
-            return {
-                price: analysisData.price || 0,
-                dipScore: analysisData.score || 0,
-                price_change_percentage_24h: analysisData.price_change_24h || 0,
-                price_change_percentage_7d: analysisData.price_change_7d || 0,
-                total_volume: analysisData.volume_24h || 0,
-                market_cap: analysisData.market_cap || 0,
-                volatility: Math.abs(analysisData.price_change_24h || 0) / 100,
-                spread: 0.005 // Estimated spread
-            };
+            if (analysisData.price && analysisData.price > 0) {
+                console.log(`✅ Got market data from analysis API for ${crypto}`);
+                return {
+                    price: analysisData.price,
+                    dipScore: analysisData.score || 0,
+                    price_change_percentage_24h: analysisData.price_change_24h || 0,
+                    price_change_percentage_7d: analysisData.price_change_7d || 0,
+                    total_volume: analysisData.volume_24h || 0,
+                    market_cap: analysisData.market_cap || 0,
+                    volatility: Math.abs(analysisData.price_change_24h || 0) / 100,
+                    spread: 0.005 // Estimated spread
+                };
+            }
         }
+        
+        // Second try: Direct CoinGecko API call as fallback
+        console.log(`🔄 Analysis API failed, trying direct CoinGecko for ${crypto}...`);
+        const geckoResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${crypto}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`);
+        
+        if (geckoResponse.ok) {
+            const geckoData = await geckoResponse.json();
+            const coinData = geckoData[crypto];
+            
+            if (coinData && coinData.usd) {
+                console.log(`✅ Got market data from CoinGecko for ${crypto}`);
+                return {
+                    price: coinData.usd,
+                    dipScore: 0, // No dip score available from direct API
+                    price_change_percentage_24h: coinData.usd_24h_change || 0,
+                    price_change_percentage_7d: 0, // Not available in this endpoint
+                    total_volume: coinData.usd_24h_vol || 0,
+                    market_cap: coinData.usd_market_cap || 0,
+                    volatility: Math.abs(coinData.usd_24h_change || 0) / 100,
+                    spread: 0.01
+                };
+            }
+        }
+        
+        throw new Error(`No market data available for ${crypto} from any source`);
+        
     } catch (error) {
-        console.error('Failed to get market data:', error);
+        console.error(`❌ Failed to get market data for ${crypto}:`, error.message);
+        throw new Error(`Unable to retrieve current market data for ${crypto}. Please verify the cryptocurrency name and try again.`);
     }
-
-    // Fallback data
-    return {
-        price: 45000,
-        dipScore: 50,
-        price_change_percentage_24h: -5,
-        price_change_percentage_7d: -10,
-        total_volume: 1000000000,
-        market_cap: 800000000000,
-        volatility: 0.5,
-        spread: 0.01
-    };
 }
 
 async function getAdvancedTechnicalAnalysis(crypto) {
@@ -724,49 +815,7 @@ function getOptimalExchanges(marketData) {
     return ['Binance', 'Coinbase Pro', 'Kraken'];
 }
 
-// Fallback functions for when data fetching fails
-function getFallbackMarketData(crypto) {
-    console.log(`📋 Using fallback market data for ${crypto}`);
-    return {
-        price: 45000,
-        dipScore: 50,
-        price_change_percentage_24h: -2,
-        price_change_percentage_7d: -5,
-        total_volume: 1000000000,
-        market_cap: 800000000000,
-        volatility: 0.4,
-        spread: 0.01
-    };
-}
-
-function getFallbackTechnicalAnalysis() {
-    return {
-        rsi: 45,
-        macd: -50,
-        support: 42000,
-        resistance: 48000,
-        overallScore: 55,
-        momentum: 'neutral',
-        signals: ['neutral'],
-        patterns: ['consolidation']
-    };
-}
-
-function getFallbackSentimentAnalysis() {
-    return {
-        score: 50,
-        sources: ['algorithmic'],
-        trend: 'neutral'
-    };
-}
-
-function getFallbackMarketContext() {
-    return {
-        condition: 'neutral',
-        phase: 'consolidation',
-        bitcoinCorrelation: 0.7
-    };
-}
+// These fallback functions are removed - we should fail gracefully rather than use fake data
 
 function getOptimalTimingWindow(technicalAnalysis) {
     return 'Next 2-4 hours (low resistance zone)';
