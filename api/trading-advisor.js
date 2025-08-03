@@ -825,6 +825,37 @@ function calculateSlippageProtection(positionSize, volume) {
     return positionSize.dollarAmount > volume * 0.001 ? 0.5 : 0.25;
 }
 
+// Pro-tier advanced functions
+function generatePortfolioOptimization(params) {
+    const { crypto, marketData, portfolioSize, riskTolerance } = params;
+    return {
+        allocation: `${crypto}: ${Math.min(10, portfolioSize / marketData.price * 0.05).toFixed(2)}%`,
+        rebalanceFrequency: 'Weekly',
+        correlationRisk: 'Monitor BTC correlation',
+        diversificationScore: 75
+    };
+}
+
+function generateAutomationSuggestions(params) {
+    const { marketData, technicalAnalysis, riskTolerance } = params;
+    return {
+        dcaSchedule: riskTolerance === 'low' ? 'Weekly' : 'Bi-weekly',
+        stopLossAutomation: `Set trailing stop at ${technicalAnalysis?.support || marketData.price * 0.9}`,
+        takeProfitLadder: 'Scale out 25% at each resistance level',
+        rebalanceThreshold: '15% portfolio drift'
+    };
+}
+
+function generateAdvancedRiskMetrics(params) {
+    const { marketData, riskMetrics } = params;
+    return {
+        sharpeRatio: (marketData.price_change_percentage_7d || 0) / (riskMetrics.volatility * 100),
+        maxDrawdown: `${Math.abs(marketData.price_change_percentage_7d || 0)}%`,
+        valueAtRisk: `${(marketData.price * riskMetrics.volatility * 1.96).toFixed(2)}`,
+        expectedReturn: `${(marketData.price_change_percentage_24h || 0) * 365}% annualized`
+    };
+}
+
 // ==================== REAL AI INTEGRATION FUNCTIONS ====================
 
 async function getAIMarketInsights(params) {
