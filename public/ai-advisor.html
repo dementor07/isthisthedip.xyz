@@ -357,14 +357,16 @@
                 // Check if user is logged in and has appropriate tier
                 try {
                     const response = await fetch('/api/auth?action=me', {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+                        credentials: 'include'
                     });
                     
                     if (response.ok) {
-                        const user = await response.json();
-                        if (user.tier === 'premium' || user.tier === 'pro') {
-                            // User has access
-                            return true;
+                        const data = await response.json();
+                        if (data.authenticated && data.user) {
+                            if (data.user.tier === 'premium' || data.user.tier === 'pro') {
+                                // User has access
+                                return true;
+                            }
                         }
                     }
                 } catch (error) {
@@ -389,9 +391,9 @@
                     const response = await fetch('/api/trading-advisor', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                            'Content-Type': 'application/json'
                         },
+                        credentials: 'include',
                         body: JSON.stringify(formData)
                     });
 

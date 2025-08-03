@@ -18,14 +18,32 @@ export default async function handler(req, res) {
     try {
         const { crypto, portfolioSize, riskTolerance, investmentGoal, timeHorizon } = req.body;
         
-        // Get user from auth token (implement based on your auth system)
-        const user = await getUserFromToken(req.headers.authorization);
+        // Authenticate user using cookie-based auth (same as other APIs)
+        const { authenticateToken, getUserById } = await import('./prisma-utils.js');
+        const decoded = authenticateToken(req);
+        
+        if (!decoded) {
+            return res.status(401).json({ 
+                error: 'Authentication required. Please log in.',
+                redirect_url: '/login'
+            });
+        }
+
+        // Get fresh user data from database
+        const user = await getUserById(decoded.id);
+        if (!user) {
+            return res.status(401).json({ 
+                error: 'User not found. Please log in again.',
+                redirect_url: '/login'
+            });
+        }
         
         // Check subscription tier
-        if (!user || (user.tier !== 'premium' && user.tier !== 'pro')) {
+        if (user.tier !== 'premium' && user.tier !== 'pro') {
             return res.status(403).json({ 
                 error: 'AI Trading Advisor requires Premium or Pro subscription',
-                upgrade_url: '/pricing'
+                upgrade_url: '/pricing',
+                current_tier: user.tier
             });
         }
 
@@ -644,30 +662,6 @@ async function getMarketContextAnalysis() {
     };
 }
 
-async function getUserFromToken(authToken) {
-    try {
-        if (!authToken || !authToken.startsWith('Bearer ')) {
-            return null;
-        }
-
-        const token = authToken.split(' ')[1];
-        
-        // Use the existing auth system from auth.js
-        const response = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/auth?action=me`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (response.ok) {
-            return await response.json();
-        }
-    } catch (error) {
-        console.error('Auth token validation failed:', error);
-    }
-
-    return null;
-}
 
 function getOptimalExchanges(marketData) {
     return ['Binance', 'Coinbase Pro', 'Kraken'];
