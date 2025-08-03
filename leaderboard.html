@@ -114,24 +114,50 @@
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-8">
         <!-- Controls -->
-        <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center space-x-4">
-                <h2 class="text-2xl font-bold">Top Cryptocurrency Dips</h2>
-                <div id="lastUpdated" class="text-sm text-gray-400"></div>
+        <div class="mb-8 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <h2 class="text-2xl font-bold">Complete Cryptocurrency Leaderboard</h2>
+                    <div id="lastUpdated" class="text-sm text-gray-400"></div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Search coins..." 
+                            class="bg-gray-800 text-white px-4 py-2 pl-10 rounded-lg border border-gray-600 w-48"
+                        >
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    
+                    <!-- Timeframe Filter -->
+                    <select id="timeframeSelect" class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600">
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                    </select>
+                    
+                    <!-- Refresh Button -->
+                    <button id="refreshBtn" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
             </div>
             
-            <div class="flex items-center space-x-4">
-                <!-- Timeframe Filter -->
-                <select id="timeframeSelect" class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600">
-                    <option value="24h">Last 24 Hours</option>
-                    <option value="7d">Last 7 Days</option>
-                    <option value="30d">Last 30 Days</option>
-                </select>
-                
-                <!-- Refresh Button -->
-                <button id="refreshBtn" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition">
-                    <i class="fas fa-sync-alt mr-2"></i>Refresh
-                </button>
+            <!-- Status Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-gray-400">
+                <div class="flex items-center space-x-4">
+                    <span id="statusText">Loading...</span>
+                    <span id="cacheStatus" class="px-2 py-1 bg-gray-700 rounded text-xs"></span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span>Page <span id="currentPage">1</span> of <span id="totalPages">1</span></span>
+                    <span>•</span>
+                    <span>Showing <span id="showingCount">0</span> of <span id="totalCoins">0</span> coins</span>
+                </div>
             </div>
         </div>
 
@@ -171,11 +197,36 @@
                         <!-- Loading rows -->
                         <tr class="loading-row">
                             <td colspan="8" class="px-6 py-8 text-center text-gray-400">
-                                <i class="fas fa-spinner fa-spin mr-2"></i>Loading leaderboard data...
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Loading comprehensive leaderboard data...
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-2">
+                <button id="prevBtn" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fas fa-chevron-left mr-2"></i>Previous
+                </button>
+                <div id="pageNumbers" class="flex items-center space-x-1">
+                    <!-- Page numbers will be inserted here -->
+                </div>
+                <button id="nextBtn" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    Next<i class="fas fa-chevron-right ml-2"></i>
+                </button>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-400">Coins per page:</span>
+                <select id="limitSelect" class="bg-gray-800 text-white px-3 py-2 rounded border border-gray-600">
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
             </div>
         </div>
 
@@ -206,9 +257,15 @@
     <!-- Load JavaScript -->
     <script src="/js/auth.js"></script>
     <script>
-        class LeaderboardManager {
+        class ComprehensiveLeaderboardManager {
             constructor() {
                 this.currentTimeframe = '24h';
+                this.currentPage = 1;
+                this.currentLimit = 100;
+                this.currentSearch = '';
+                this.searchTimeout = null;
+                this.isLoading = false;
+                this.metadata = {};
                 this.init();
             }
 
@@ -219,17 +276,56 @@
             }
 
             setupEventListeners() {
+                // Timeframe filter
                 document.getElementById('timeframeSelect').addEventListener('change', (e) => {
                     this.currentTimeframe = e.target.value;
+                    this.currentPage = 1;
                     this.loadLeaderboard();
                 });
 
-                document.getElementById('refreshBtn').addEventListener('click', () => {
+                // Search input with debouncing
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => {
+                        this.currentSearch = e.target.value.trim();
+                        this.currentPage = 1;
+                        this.loadLeaderboard();
+                    }, 500);
+                });
+
+                // Limit selector
+                document.getElementById('limitSelect').addEventListener('change', (e) => {
+                    this.currentLimit = parseInt(e.target.value);
+                    this.currentPage = 1;
                     this.loadLeaderboard();
+                });
+
+                // Refresh button
+                document.getElementById('refreshBtn').addEventListener('click', () => {
+                    this.loadLeaderboard(true);
+                });
+
+                // Pagination buttons
+                document.getElementById('prevBtn').addEventListener('click', () => {
+                    if (this.currentPage > 1) {
+                        this.currentPage--;
+                        this.loadLeaderboard();
+                    }
+                });
+
+                document.getElementById('nextBtn').addEventListener('click', () => {
+                    if (this.metadata.hasMore) {
+                        this.currentPage++;
+                        this.loadLeaderboard();
+                    }
                 });
             }
 
-            async loadLeaderboard() {
+            async loadLeaderboard(forceRefresh = false) {
+                if (this.isLoading) return;
+                
+                this.isLoading = true;
+                
                 try {
                     const refreshBtn = document.getElementById('refreshBtn');
                     const spinner = refreshBtn.querySelector('.fa-sync-alt');
@@ -237,25 +333,46 @@
                     // Show loading state
                     spinner.classList.add('fa-spin');
                     refreshBtn.disabled = true;
+                    this.updateStatus('Loading comprehensive leaderboard...');
 
-                    const response = await fetch(`/api/leaderboard?timeframe=${this.currentTimeframe}&limit=100&source=live`);
+                    const params = new URLSearchParams({
+                        timeframe: this.currentTimeframe,
+                        page: this.currentPage,
+                        limit: this.currentLimit,
+                        source: 'live'
+                    });
+
+                    if (this.currentSearch) {
+                        params.append('search', this.currentSearch);
+                    }
+
+                    if (forceRefresh) {
+                        params.append('refresh', 'true');
+                    }
+
+                    const response = await fetch(`/api/leaderboard?${params}`);
                     const data = await response.json();
 
                     if (response.ok) {
+                        this.metadata = data.metadata;
                         this.renderLeaderboard(data);
                         this.updateStats(data.metadata);
+                        this.updatePagination(data.metadata);
+                        this.updateStatus(`Showing ${this.currentSearch ? 'filtered' : ''} results`);
                         document.getElementById('emptyState').classList.add('hidden');
                     } else {
                         throw new Error(data.error || 'Failed to load leaderboard');
                     }
                 } catch (error) {
                     console.error('Leaderboard error:', error);
-                    this.showError('Failed to load leaderboard data');
+                    this.showError('Failed to load comprehensive leaderboard data');
+                    this.updateStatus('Error loading data');
                 } finally {
                     const refreshBtn = document.getElementById('refreshBtn');
                     const spinner = refreshBtn.querySelector('.fa-sync-alt');
                     spinner.classList.remove('fa-spin');
                     refreshBtn.disabled = false;
+                    this.isLoading = false;
                 }
             }
 
@@ -263,16 +380,26 @@
                 const tbody = document.getElementById('leaderboardTable');
                 
                 if (!data.leaderboard || data.leaderboard.length === 0) {
-                    document.getElementById('emptyState').classList.remove('hidden');
-                    tbody.innerHTML = '';
+                    if (this.currentSearch) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="8" class="px-6 py-8 text-center text-gray-400">
+                                    <i class="fas fa-search mr-2"></i>No coins found matching "${this.currentSearch}"
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        document.getElementById('emptyState').classList.remove('hidden');
+                        tbody.innerHTML = '';
+                    }
                     return;
                 }
 
-                tbody.innerHTML = data.leaderboard.map((coin, index) => `
+                tbody.innerHTML = data.leaderboard.map((coin) => `
                     <tr class="hover:bg-gray-800 hover:bg-opacity-50 transition-colors">
                         <td class="px-6 py-4">
-                            <span class="rank-badge ${this.getRankClass(index + 1)} px-3 py-1 rounded-full text-sm font-bold">
-                                #${index + 1}
+                            <span class="rank-badge ${this.getRankClass(coin.rank)} px-3 py-1 rounded-full text-sm font-bold">
+                                #${coin.rank}
                             </span>
                         </td>
                         <td class="px-6 py-4">
@@ -281,7 +408,7 @@
                                 <div>
                                     <div class="font-semibold">${coin.name}</div>
                                     <div class="text-sm text-gray-400">${coin.symbol}</div>
-                                    <div class="text-xs text-gray-500">Rank #${coin.marketCapRank || 'N/A'}</div>
+                                    <div class="text-xs text-gray-500">Market Cap Rank #${coin.marketCapRank || 'N/A'}</div>
                                 </div>
                             </div>
                         </td>
@@ -311,7 +438,7 @@
                             <div class="text-sm">$${this.formatLargeNumber(coin.marketCap)}</div>
                         </td>
                         <td class="px-6 py-4 text-center">
-                            <button onclick="this.analyzeCoin('${coin.symbol}')" class="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm transition">
+                            <button onclick="window.leaderboard.analyzeCoin('${coin.symbol}')" class="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm transition">
                                 Analyze
                             </button>
                         </td>
@@ -320,10 +447,72 @@
             }
 
             updateStats(metadata) {
-                document.getElementById('totalCoins').textContent = metadata.totalCoins;
+                document.getElementById('totalCoins').textContent = metadata.totalCoins.toLocaleString();
                 document.getElementById('topDipName').textContent = metadata.topDip?.symbol || '-';
                 document.getElementById('topDipScore').textContent = metadata.topDip?.score || '-';
                 document.getElementById('lastUpdated').textContent = `Updated: ${this.formatTime(metadata.lastUpdated)}`;
+                
+                // Update status info
+                document.getElementById('currentPage').textContent = metadata.page;
+                document.getElementById('totalPages').textContent = metadata.totalPages;
+                document.getElementById('showingCount').textContent = metadata.limit;
+                
+                // Update cache status
+                const cacheStatus = document.getElementById('cacheStatus');
+                cacheStatus.textContent = metadata.cacheStatus === 'cached' ? '24h Cache' : 'Live Data';
+                cacheStatus.className = `px-2 py-1 rounded text-xs ${
+                    metadata.cacheStatus === 'cached' ? 'bg-green-700 text-green-200' : 'bg-blue-700 text-blue-200'
+                }`;
+            }
+
+            updatePagination(metadata) {
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
+                const pageNumbers = document.getElementById('pageNumbers');
+                
+                // Update button states
+                prevBtn.disabled = metadata.page <= 1;
+                nextBtn.disabled = !metadata.hasMore;
+                
+                // Generate page numbers (show 5 pages around current)
+                const currentPage = metadata.page;
+                const totalPages = metadata.totalPages;
+                const startPage = Math.max(1, currentPage - 2);
+                const endPage = Math.min(totalPages, currentPage + 2);
+                
+                let pageHTML = '';
+                
+                // First page
+                if (startPage > 1) {
+                    pageHTML += `<button onclick="window.leaderboard.goToPage(1)" class="px-3 py-1 rounded text-sm ${currentPage === 1 ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}">1</button>`;
+                    if (startPage > 2) {
+                        pageHTML += `<span class="px-2 text-gray-500">...</span>`;
+                    }
+                }
+                
+                // Middle pages
+                for (let i = startPage; i <= endPage; i++) {
+                    pageHTML += `<button onclick="window.leaderboard.goToPage(${i})" class="px-3 py-1 rounded text-sm ${currentPage === i ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}">${i}</button>`;
+                }
+                
+                // Last page
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        pageHTML += `<span class="px-2 text-gray-500">...</span>`;
+                    }
+                    pageHTML += `<button onclick="window.leaderboard.goToPage(${totalPages})" class="px-3 py-1 rounded text-sm ${currentPage === totalPages ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}">${totalPages}</button>`;
+                }
+                
+                pageNumbers.innerHTML = pageHTML;
+            }
+
+            goToPage(page) {
+                this.currentPage = page;
+                this.loadLeaderboard();
+            }
+
+            updateStatus(message) {
+                document.getElementById('statusText').textContent = message;
             }
 
             getRankClass(rank) {
@@ -412,10 +601,12 @@
             }
 
             startAutoRefresh() {
-                // Auto-refresh every 2 minutes
+                // Auto-refresh every 5 minutes for comprehensive data
                 setInterval(() => {
-                    this.loadLeaderboard();
-                }, 120000);
+                    if (!this.isLoading) {
+                        this.loadLeaderboard();
+                    }
+                }, 300000);
             }
         }
 
@@ -438,9 +629,9 @@
             }
         }
 
-        // Initialize leaderboard
+        // Initialize comprehensive leaderboard
         document.addEventListener('DOMContentLoaded', () => {
-            new LeaderboardManager();
+            window.leaderboard = new ComprehensiveLeaderboardManager();
             initializeMobileMenu();
         });
     </script>

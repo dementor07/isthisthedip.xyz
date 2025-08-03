@@ -1,6 +1,16 @@
 // Vercel serverless function for comprehensive crypto leaderboard
 import { getLeaderboard } from './prisma-utils.js';
 
+// Cache for storing all coin data with 24-hour refresh
+let allCoinsCache = {
+  data: null,
+  lastUpdated: null,
+  isUpdating: false
+};
+
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const COINGECKO_TOTAL_COINS = 10000; // Approximate total coins in CoinGecko
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,26 +26,45 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { timeframe = '24h', limit = 100, source = 'live' } = req.query;
+    const { 
+      timeframe = '24h', 
+      page = 1, 
+      limit = 100, 
+      source = 'live',
+      search = ''
+    } = req.query;
     
-    let leaderboard;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    
+    let leaderboard, totalCoins, hasMore;
     
     if (source === 'analyzed') {
       // Get analyzed coins from database (original functionality)
-      leaderboard = await getLeaderboard(timeframe, parseInt(limit));
+      leaderboard = await getLeaderboard(timeframe, limitNum);
+      totalCoins = leaderboard.length;
+      hasMore = false;
     } else {
-      // Get live market data for top cryptocurrencies
-      leaderboard = await getLiveMarketLeaderboard(parseInt(limit));
+      // Get comprehensive live market data with pagination
+      const result = await getComprehensiveLeaderboard(pageNum, limitNum, search);
+      leaderboard = result.coins;
+      totalCoins = result.totalCoins;
+      hasMore = result.hasMore;
     }
     
     const metadata = {
       source: source,
-      totalCoins: leaderboard.length,
+      page: pageNum,
+      limit: limitNum,
+      totalCoins: totalCoins,
+      hasMore: hasMore,
+      totalPages: Math.ceil(totalCoins / limitNum),
       topDip: leaderboard.length > 0 ? { 
         symbol: leaderboard[0].symbol, 
         score: leaderboard[0].score 
       } : null,
-      lastUpdated: new Date()
+      lastUpdated: allCoinsCache.lastUpdated || new Date(),
+      cacheStatus: allCoinsCache.data ? 'cached' : 'fresh'
     };
 
     return res.status(200).json({
@@ -46,6 +75,186 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Leaderboard error:', error);
     return res.status(500).json({ error: 'Leaderboard failed' });
+  }
+}
+
+async function getComprehensiveLeaderboard(page = 1, limit = 100, search = '') {
+  try {
+    // Check if cache needs refresh
+    const needsRefresh = !allCoinsCache.data || 
+                        !allCoinsCache.lastUpdated || 
+                        (Date.now() - allCoinsCache.lastUpdated) > CACHE_DURATION;
+
+    // Refresh cache if needed (non-blocking for subsequent requests)
+    if (needsRefresh && !allCoinsCache.isUpdating) {
+      refreshAllCoinsCache(); // Non-blocking background refresh
+    }
+
+    // If no cache exists, do initial load
+    if (!allCoinsCache.data) {
+      console.log('No cache available, performing initial load...');
+      await refreshAllCoinsCache();
+    }
+
+    let allCoins = allCoinsCache.data || [];
+
+    // Apply search filter if provided
+    if (search && search.trim()) {
+      const searchTerm = search.toLowerCase().trim();
+      allCoins = allCoins.filter(coin => 
+        coin.symbol.toLowerCase().includes(searchTerm) ||
+        coin.name.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Sort by dip score (highest scores first)
+    allCoins.sort((a, b) => b.score - a.score);
+
+    // Calculate pagination
+    const totalCoins = allCoins.length;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedCoins = allCoins.slice(startIndex, endIndex);
+    const hasMore = endIndex < totalCoins;
+
+    // Add dynamic ranking based on filtered/sorted results
+    const rankedCoins = paginatedCoins.map((coin, index) => ({
+      ...coin,
+      rank: startIndex + index + 1
+    }));
+
+    return {
+      coins: rankedCoins,
+      totalCoins: totalCoins,
+      hasMore: hasMore,
+      currentPage: page,
+      totalPages: Math.ceil(totalCoins / limit)
+    };
+
+  } catch (error) {
+    console.error('Error in comprehensive leaderboard:', error);
+    return {
+      coins: [],
+      totalCoins: 0,
+      hasMore: false,
+      currentPage: page,
+      totalPages: 0
+    };
+  }
+}
+
+async function refreshAllCoinsCache() {
+  if (allCoinsCache.isUpdating) {
+    console.log('Cache refresh already in progress...');
+    return;
+  }
+
+  allCoinsCache.isUpdating = true;
+  
+  try {
+    console.log('🔄 Starting comprehensive coin data refresh...');
+    const startTime = Date.now();
+    
+    const allCoins = [];
+    const fearGreedData = await getFearGreedIndex();
+    
+    // CoinGecko limits: 250 coins per request, up to 10000 total
+    const coinsPerPage = 250;
+    const maxPages = Math.ceil(COINGECKO_TOTAL_COINS / coinsPerPage);
+    
+    // Fetch all pages in batches to avoid rate limits
+    const batchSize = 5; // Process 5 pages at a time
+    
+    for (let batch = 0; batch < Math.ceil(maxPages / batchSize); batch++) {
+      const batchPromises = [];
+      
+      for (let i = 0; i < batchSize && (batch * batchSize + i) < maxPages; i++) {
+        const page = batch * batchSize + i + 1;
+        batchPromises.push(fetchCoinPage(page, coinsPerPage, fearGreedData));
+      }
+      
+      // Wait for current batch
+      const batchResults = await Promise.allSettled(batchPromises);
+      
+      // Collect successful results
+      batchResults.forEach(result => {
+        if (result.status === 'fulfilled' && result.value) {
+          allCoins.push(...result.value);
+        }
+      });
+      
+      console.log(`📊 Processed batch ${batch + 1}/${Math.ceil(maxPages / batchSize)}, total coins: ${allCoins.length}`);
+      
+      // Small delay between batches to respect rate limits
+      if (batch < Math.ceil(maxPages / batchSize) - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    // Update cache
+    allCoinsCache.data = allCoins;
+    allCoinsCache.lastUpdated = Date.now();
+    
+    const duration = (Date.now() - startTime) / 1000;
+    console.log(`✅ Cache refresh complete! Loaded ${allCoins.length} coins in ${duration.toFixed(2)}s`);
+    
+  } catch (error) {
+    console.error('❌ Cache refresh failed:', error);
+  } finally {
+    allCoinsCache.isUpdating = false;
+  }
+}
+
+async function fetchCoinPage(page, perPage, fearGreedData) {
+  try {
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/coins/markets?` +
+      `vs_currency=usd&order=market_cap_desc&per_page=${perPage}&page=${page}&` +
+      `sparkline=false&price_change_percentage=1h,24h,7d,30d`
+    );
+    
+    if (!response.ok) {
+      if (response.status === 429) {
+        // Rate limited - wait and retry once
+        console.warn(`Rate limited on page ${page}, waiting...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return fetchCoinPage(page, perPage, fearGreedData);
+      }
+      throw new Error(`API error: ${response.status} on page ${page}`);
+    }
+    
+    const coins = await response.json();
+    
+    // Process and analyze each coin
+    return coins.map(coin => {
+      const dipScore = calculateDipScore(coin, fearGreedData);
+      
+      return {
+        symbol: coin.symbol.toUpperCase(),
+        name: coin.name,
+        score: dipScore.score,
+        signal: dipScore.signal,
+        confidence: dipScore.confidence,
+        price: coin.current_price,
+        priceChange24h: coin.price_change_percentage_24h || 0,
+        priceChange7d: coin.price_change_percentage_7d_in_currency || 0,
+        priceChange30d: coin.price_change_percentage_30d_in_currency || 0,
+        marketCap: coin.market_cap,
+        volume24h: coin.total_volume,
+        marketCapRank: coin.market_cap_rank,
+        ath: coin.ath,
+        athChangePercentage: coin.ath_change_percentage,
+        atl: coin.atl,
+        atlChangePercentage: coin.atl_change_percentage,
+        circulatingSupply: coin.circulating_supply,
+        maxSupply: coin.max_supply,
+        lastAnalyzed: new Date()
+      };
+    });
+    
+  } catch (error) {
+    console.error(`Error fetching page ${page}:`, error);
+    return null;
   }
 }
 
