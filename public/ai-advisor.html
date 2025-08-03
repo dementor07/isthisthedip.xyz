@@ -382,7 +382,13 @@
                 const hasAccess = await this.checkUserAuth();
                 if (!hasAccess) return;
 
-                const formData = this.getFormData();
+                let formData;
+                try {
+                    formData = this.getFormData();
+                } catch (error) {
+                    // Form validation error - error already shown by getFormData()
+                    return;
+                }
                 
                 // Show loading state
                 this.showLoading();
@@ -414,13 +420,32 @@
             }
 
             getFormData() {
-                return {
-                    crypto: document.getElementById('crypto').value,
-                    portfolioSize: parseInt(document.getElementById('portfolioSize').value),
-                    riskTolerance: document.getElementById('riskTolerance').value,
-                    investmentGoal: document.getElementById('investmentGoal').value,
-                    timeHorizon: document.querySelector('input[name="timeHorizon"]:checked').value
-                };
+                try {
+                    const timeHorizonElement = document.querySelector('input[name="timeHorizon"]:checked');
+                    if (!timeHorizonElement) {
+                        throw new Error('Please select a time horizon');
+                    }
+                    
+                    const data = {
+                        crypto: document.getElementById('crypto').value,
+                        portfolioSize: parseInt(document.getElementById('portfolioSize').value),
+                        riskTolerance: document.getElementById('riskTolerance').value,
+                        investmentGoal: document.getElementById('investmentGoal').value,
+                        timeHorizon: timeHorizonElement.value
+                    };
+                    
+                    // Validate data
+                    if (!data.crypto) throw new Error('Please enter a cryptocurrency');
+                    if (!data.portfolioSize || data.portfolioSize <= 0) throw new Error('Please enter a valid portfolio size');
+                    if (!data.riskTolerance) throw new Error('Please select a risk tolerance');
+                    if (!data.investmentGoal) throw new Error('Please select an investment goal');
+                    
+                    return data;
+                } catch (error) {
+                    console.error('Form validation error:', error);
+                    this.showError(error.message);
+                    throw error;
+                }
             }
 
             displayStrategy(strategy, userTier) {

@@ -1,5 +1,5 @@
 // Advanced AI Trading Advisor for Premium/Pro Users with Real AI Integration
-import { getUser, updateUser } from './prisma-utils.js';
+import { getUser, updateUser, authenticateToken, getUserById } from './prisma-utils.js';
 
 export default async function handler(req, res) {
     // Set CORS headers
@@ -18,8 +18,16 @@ export default async function handler(req, res) {
     try {
         const { crypto, portfolioSize, riskTolerance, investmentGoal, timeHorizon } = req.body;
         
+        // Validate required fields
+        if (!crypto || !portfolioSize || !riskTolerance || !investmentGoal || !timeHorizon) {
+            return res.status(400).json({ 
+                error: 'Missing required fields',
+                required: ['crypto', 'portfolioSize', 'riskTolerance', 'investmentGoal', 'timeHorizon'],
+                received: { crypto, portfolioSize, riskTolerance, investmentGoal, timeHorizon }
+            });
+        }
+        
         // Authenticate user using cookie-based auth (same as other APIs)
-        const { authenticateToken, getUserById } = await import('./prisma-utils.js');
         const decoded = authenticateToken(req);
         
         if (!decoded) {
@@ -67,7 +75,15 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('Trading Advisor error:', error);
-        return res.status(500).json({ error: 'Trading analysis failed' });
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack?.substring(0, 500),
+            name: error.name
+        });
+        return res.status(500).json({ 
+            error: 'Trading analysis failed',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 }
 
