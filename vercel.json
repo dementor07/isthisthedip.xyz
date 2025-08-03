@@ -8,6 +8,9 @@
     },
     "api/chat.js": {
       "maxDuration": 30
+    },
+    "api/trading-advisor.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -74,6 +77,10 @@
     {
       "source": "/converter",
       "destination": "/converter.html"
+    },
+    {
+      "source": "/ai-advisor",
+      "destination": "/ai-advisor.html"
     },
     {
       "source": "/js/(.*)",
