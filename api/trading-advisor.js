@@ -1,5 +1,5 @@
 // Advanced AI Trading Advisor for Premium/Pro Users with Real AI Integration
-import { authenticateToken, getUserById } from './prisma-utils.js';
+// import { authenticateToken, getUserById } from './prisma-utils.js';
 
 export default async function handler(req, res) {
     try {
