@@ -397,18 +397,41 @@
                         params.append('refresh', 'true');
                     }
 
+                    console.log('🔄 Loading leaderboard with params:', params.toString());
                     const response = await fetch(`/api/leaderboard?${params}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
                     const data = await response.json();
+                    console.log('📊 Received leaderboard data:', data);
 
-                    if (response.ok) {
-                        this.metadata = data.metadata;
-                        this.renderLeaderboard(data);
-                        this.updateStats(data.metadata);
-                        this.updatePagination(data.metadata);
-                        this.updateStatus(`Showing ${this.currentSearch ? 'filtered' : ''} results`);
+                    if (data && (data.leaderboard || data.coins)) {
+                        // Handle both old and new data formats
+                        const leaderboardData = data.leaderboard || data.coins || [];
+                        const metadata = data.metadata || {
+                            totalCoins: leaderboardData.length,
+                            page: this.currentPage,
+                            limit: this.currentLimit,
+                            hasMore: false,
+                            totalPages: 1,
+                            topDip: leaderboardData[0] ? {
+                                symbol: leaderboardData[0].symbol,
+                                score: leaderboardData[0].score
+                            } : null,
+                            lastUpdated: new Date(),
+                            cacheStatus: 'live'
+                        };
+                        
+                        this.metadata = metadata;
+                        this.renderLeaderboard({ leaderboard: leaderboardData });
+                        this.updateStats(metadata);
+                        this.updatePagination(metadata);
+                        this.updateStatus(`Showing ${leaderboardData.length} cryptocurrencies`);
                         document.getElementById('emptyState').classList.add('hidden');
                     } else {
-                        throw new Error(data.error || 'Failed to load leaderboard');
+                        throw new Error('No leaderboard data received');
                     }
                 } catch (error) {
                     console.error('Leaderboard error:', error);
