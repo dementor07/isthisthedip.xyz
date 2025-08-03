@@ -90,10 +90,13 @@ async function getComprehensiveLeaderboard(page = 1, limit = 100, search = '') {
       refreshAllCoinsCache(); // Non-blocking background refresh
     }
 
-    // If no cache exists, do initial load
+    // If no cache exists, fall back to original method for immediate results
     if (!allCoinsCache.data) {
-      console.log('No cache available, performing initial load...');
-      await refreshAllCoinsCache();
+      console.log('No cache available, falling back to original method...');
+      // Start cache refresh in background (non-blocking)
+      refreshAllCoinsCache();
+      // Return immediate results using original method
+      return await getOriginalLeaderboardWithPagination(page, limit, search);
     }
 
     let allCoins = allCoinsCache.data || [];
@@ -154,18 +157,23 @@ async function refreshAllCoinsCache() {
   try {
     console.log('🔄 Starting comprehensive coin data refresh...');
     const startTime = Date.now();
+    const TIMEOUT_MS = 25000; // 25 seconds to stay under Vercel 30s limit
     
     const allCoins = [];
     const fearGreedData = await getFearGreedIndex();
     
-    // CoinGecko limits: 250 coins per request, up to 10000 total
+    // Reduced scope for initial implementation - start with 2000 coins
     const coinsPerPage = 250;
-    const maxPages = Math.ceil(COINGECKO_TOTAL_COINS / coinsPerPage);
-    
-    // Fetch all pages in batches to avoid rate limits
-    const batchSize = 5; // Process 5 pages at a time
+    const maxPages = 8; // 2000 coins total for now
+    const batchSize = 3; // Smaller batches to stay within timeout
     
     for (let batch = 0; batch < Math.ceil(maxPages / batchSize); batch++) {
+      // Check timeout
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        console.warn('⏰ Timeout reached, stopping cache refresh');
+        break;
+      }
+      
       const batchPromises = [];
       
       for (let i = 0; i < batchSize && (batch * batchSize + i) < maxPages; i++) {
@@ -173,7 +181,7 @@ async function refreshAllCoinsCache() {
         batchPromises.push(fetchCoinPage(page, coinsPerPage, fearGreedData));
       }
       
-      // Wait for current batch
+      // Wait for current batch with timeout
       const batchResults = await Promise.allSettled(batchPromises);
       
       // Collect successful results
@@ -185,18 +193,22 @@ async function refreshAllCoinsCache() {
       
       console.log(`📊 Processed batch ${batch + 1}/${Math.ceil(maxPages / batchSize)}, total coins: ${allCoins.length}`);
       
-      // Small delay between batches to respect rate limits
+      // Shorter delay to save time
       if (batch < Math.ceil(maxPages / batchSize) - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
     
-    // Update cache
-    allCoinsCache.data = allCoins;
-    allCoinsCache.lastUpdated = Date.now();
-    
-    const duration = (Date.now() - startTime) / 1000;
-    console.log(`✅ Cache refresh complete! Loaded ${allCoins.length} coins in ${duration.toFixed(2)}s`);
+    // Only update cache if we got reasonable results
+    if (allCoins.length > 100) {
+      allCoinsCache.data = allCoins;
+      allCoinsCache.lastUpdated = Date.now();
+      
+      const duration = (Date.now() - startTime) / 1000;
+      console.log(`✅ Cache refresh complete! Loaded ${allCoins.length} coins in ${duration.toFixed(2)}s`);
+    } else {
+      console.warn('⚠️ Cache refresh got insufficient data, keeping existing cache');
+    }
     
   } catch (error) {
     console.error('❌ Cache refresh failed:', error);
@@ -255,6 +267,60 @@ async function fetchCoinPage(page, perPage, fearGreedData) {
   } catch (error) {
     console.error(`Error fetching page ${page}:`, error);
     return null;
+  }
+}
+
+async function getOriginalLeaderboardWithPagination(page = 1, limit = 100, search = '') {
+  try {
+    console.log(`🔄 Using fallback method for page ${page}, limit ${limit}`);
+    
+    // Calculate how many coins we need to fetch to support pagination
+    const totalNeeded = page * limit;
+    const fetchLimit = Math.min(totalNeeded, 500); // Cap at 500 for performance
+    
+    // Fetch coins using original method
+    const allCoins = await getLiveMarketLeaderboard(fetchLimit);
+    
+    // Apply search filter if provided
+    let filteredCoins = allCoins;
+    if (search && search.trim()) {
+      const searchTerm = search.toLowerCase().trim();
+      filteredCoins = allCoins.filter(coin => 
+        coin.symbol.toLowerCase().includes(searchTerm) ||
+        coin.name.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    // Calculate pagination
+    const totalCoins = filteredCoins.length;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedCoins = filteredCoins.slice(startIndex, endIndex);
+    const hasMore = endIndex < totalCoins || (totalCoins === fetchLimit && !search);
+    
+    // Add proper ranking
+    const rankedCoins = paginatedCoins.map((coin, index) => ({
+      ...coin,
+      rank: startIndex + index + 1
+    }));
+    
+    return {
+      coins: rankedCoins,
+      totalCoins: search ? totalCoins : fetchLimit, // Show fetch limit if no search
+      hasMore: hasMore,
+      currentPage: page,
+      totalPages: Math.ceil((search ? totalCoins : fetchLimit) / limit)
+    };
+    
+  } catch (error) {
+    console.error('Error in fallback leaderboard:', error);
+    return {
+      coins: [],
+      totalCoins: 0,
+      hasMore: false,
+      currentPage: page,
+      totalPages: 0
+    };
   }
 }
 
