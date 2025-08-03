@@ -2,98 +2,19 @@
 import { authenticateToken, getUserById } from './prisma-utils.js';
 
 export default async function handler(req, res) {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-
     try {
-        const { crypto, portfolioSize, riskTolerance, investmentGoal, timeHorizon } = req.body;
-        
-        // Validate required fields
-        if (!crypto || !portfolioSize || !riskTolerance || !investmentGoal || !timeHorizon) {
-            return res.status(400).json({ 
-                error: 'Missing required fields',
-                required: ['crypto', 'portfolioSize', 'riskTolerance', 'investmentGoal', 'timeHorizon'],
-                received: { crypto, portfolioSize, riskTolerance, investmentGoal, timeHorizon }
-            });
-        }
-        
-        // Authenticate user using cookie-based auth (same as other APIs)
-        const decoded = authenticateToken(req);
-        
-        if (!decoded) {
-            return res.status(401).json({ 
-                error: 'Authentication required. Please log in.',
-                redirect_url: '/login'
-            });
-        }
-
-        // Get fresh user data from database
-        const user = await getUserById(decoded.id);
-        if (!user) {
-            return res.status(401).json({ 
-                error: 'User not found. Please log in again.',
-                redirect_url: '/login'
-            });
-        }
-        
-        // Check subscription tier
-        if (user.tier !== 'premium' && user.tier !== 'pro') {
-            return res.status(403).json({ 
-                error: 'AI Trading Advisor requires Premium or Pro subscription',
-                upgrade_url: '/pricing',
-                current_tier: user.tier
-            });
-        }
-
-        // Generate comprehensive AI-powered trading advice
-        const tradingAdvice = await generateAITradingAdvice({
-            crypto,
-            portfolioSize,
-            riskTolerance,
-            investmentGoal,
-            timeHorizon,
-            userTier: user.tier,
-            userHistory: user.analysisHistory || []
-        });
-
+        // Basic test - just return success to isolate the issue
         return res.status(200).json({
             success: true,
-            advice: tradingAdvice,
-            timestamp: new Date(),
-            tier: user.tier,
-            dataQuality: {
-                marketData: 'current', // We always require real market data
-                technicalAnalysis: tradingAdvice.aiInsights?.dataQuality?.warnings?.includes('Technical analysis unavailable') ? 'limited' : 'available',
-                sentimentData: tradingAdvice.aiInsights?.dataQuality?.warnings?.includes('Sentiment data unavailable') ? 'limited' : 'available',
-                aiAnalysis: tradingAdvice.aiInsights?.sources?.length > 1 ? 'full' : 'basic',
-                overall: tradingAdvice.aiInsights?.dataQuality?.reliable ? 'high' : 'medium'
-            }
+            message: 'API is working',
+            test: true,
+            timestamp: new Date().toISOString()
         });
-
     } catch (error) {
-        console.error('Trading Advisor error:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack?.substring(0, 500),
-            name: error.name,
-            cause: error.cause
-        });
-        
-        // More detailed error response for debugging
+        console.error('Basic test error:', error);
         return res.status(500).json({ 
-            error: 'Trading analysis failed',
+            error: 'Basic test failed',
             message: error.message,
-            details: error.stack?.substring(0, 200),
             timestamp: new Date().toISOString()
         });
     }
