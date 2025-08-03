@@ -1,23 +1,9 @@
-// Advanced AI Trading Advisor for Premium/Pro Users with Real AI Integration
-// import { authenticateToken, getUserById } from './prisma-utils.js';
-
-export default async function handler(req, res) {
-    try {
-        // Basic test - just return success to isolate the issue
-        return res.status(200).json({
-            success: true,
-            message: 'API is working',
-            test: true,
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        console.error('Basic test error:', error);
-        return res.status(500).json({ 
-            error: 'Basic test failed',
-            message: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
+export default function handler(req, res) {
+    return res.status(200).json({
+        success: true,
+        message: 'Trading advisor API test',
+        timestamp: new Date().toISOString()
+    });
 }
 
 async function generateAITradingAdvice({
