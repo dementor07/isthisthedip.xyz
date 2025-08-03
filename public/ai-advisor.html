@@ -356,7 +356,7 @@
             async checkUserAuth() {
                 // Check if user is logged in and has appropriate tier
                 try {
-                    const response = await fetch('/api/auth', {
+                    const response = await fetch('/api/auth?action=me', {
                         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
                     });
                     

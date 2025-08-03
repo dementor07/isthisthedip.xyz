@@ -81,7 +81,12 @@ export default async function handler(req, res) {
           hasPostgresUrl: !!process.env.POSTGRES_URL
         });
       default:
-        return res.status(400).json({ error: 'Invalid action' });
+        if (!action) {
+          return res.status(400).json({ 
+            error: 'Missing action parameter. Please specify ?action=login, ?action=register, ?action=me, etc.' 
+          });
+        }
+        return res.status(400).json({ error: `Invalid action: ${action}` });
     }
   } catch (error) {
     console.error('Auth error:', error);

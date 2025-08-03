@@ -653,7 +653,7 @@ async function getUserFromToken(authToken) {
         const token = authToken.split(' ')[1];
         
         // Use the existing auth system from auth.js
-        const response = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/auth`, {
+        const response = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/auth?action=me`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
